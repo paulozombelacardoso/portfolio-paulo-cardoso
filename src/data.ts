@@ -240,6 +240,7 @@ export const projects: Project[] = [
     category: "Sistemas & C/C++",
     summary:
       "Motor gráfico tridimensional interactivo em tempo real em C baseado no algoritmo de raycasting, inspirado no clássico jogo Wolfenstein 3D.",
+    videoUrl: "Cub3D/cub3D.mp4",
     problem:
       "Projectar e renderizar um ambiente tridimensional interactivo a partir de uma matriz bidimensional de mapa em tempo real com alta taxa de fotogramas por segundo.",
     architecture:
@@ -372,6 +373,7 @@ export interface CertificateItem {
   date: string;
   file: string;
   isImage?: boolean;
+  thumbnail?: string;
 }
 
 export const certificatesList: CertificateItem[] = [
@@ -381,14 +383,16 @@ export const certificatesList: CertificateItem[] = [
     issuer: "OPEN MOOCs / U.S. Dept of State & FHI 360",
     date: "04/2026",
     file: "certificates/English.jpg",
-    isImage: true
+    isImage: true,
+    thumbnail: "certificates/English.jpg"
   },
   {
     id: "cert-node-ai",
     title: "Node.js com IA Generativa na Prática",
     issuer: "Formação Técnica Especializada",
     date: "2026",
-    file: "certificates/Certificate_Node.js com IA Generativa na prática.pdf"
+    file: "certificates/Certificate_Node.js com IA Generativa na prática.pdf",
+    thumbnail: "certificates/thumb_node_ai.jpg"
   },
   {
     id: "cert-turismo",
@@ -396,7 +400,8 @@ export const certificatesList: CertificateItem[] = [
     issuer: "Governo de Angola, MinTur, PNUD, 42 Luanda",
     date: "2026",
     file: "certificates/1785149446894.jpg",
-    isImage: true
+    isImage: true,
+    thumbnail: "certificates/1785149446894.jpg"
   },
   {
     id: "cert-tigra",
@@ -404,27 +409,31 @@ export const certificatesList: CertificateItem[] = [
     issuer: "Refriango / Tigra Cubs",
     date: "07/2026",
     file: "certificates/TigraCubs.jpg",
-    isImage: true
+    isImage: true,
+    thumbnail: "certificates/TigraCubs.jpg"
   },
   {
     id: "cert-imel",
     title: "Técnico Médio em Informática de Gestão",
     issuer: "Instituto Médio de Economia de Luanda (IMEL)",
     date: "Concluído",
-    file: "certificates/Certificado_IMEL.pdf"
+    file: "certificates/Certificado_IMEL.pdf",
+    thumbnail: "certificates/thumb_imel.jpg"
   },
   {
     id: "cert-time",
     title: "Certificado de Gestão de Tempo",
     issuer: "Desenvolvimento Profissional",
     date: "2026",
-    file: "certificates/Certificado_Gestão de Tempo.pdf"
+    file: "certificates/Certificado_Gestão de Tempo.pdf",
+    thumbnail: "certificates/thumb_gestao_tempo.jpg"
   },
   {
     id: "cert-42",
     title: "Transcript Académico 42 Luanda",
     issuer: "42 Luanda / Ecole 42",
     date: "Em curso",
-    file: "certificates/42_transcript.pdf"
+    file: "certificates/42_transcript.pdf",
+    thumbnail: "certificates/thumb_42_transcript.jpg"
   }
 ];

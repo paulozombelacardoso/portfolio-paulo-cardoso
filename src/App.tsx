@@ -85,6 +85,7 @@ export default function App() {
   const [selectedProject, setSelectedProject] = useState<Project | null>(null);
   const [selectedExperience, setSelectedExperience] = useState<Experience | null>(null);
   const [selectedCert, setSelectedCert] = useState<CertificateItem | null>(null);
+  const [enlargedPhoto, setEnlargedPhoto] = useState<{ src: string; title: string } | null>(null);
 
   // Estados de formulário e scroll
   const [formErrors, setFormErrors] = useState<Record<string, string>>({});
@@ -678,6 +679,7 @@ export default function App() {
                 src={selectedProject.videoUrl}
                 controls
                 playsInline
+                preload="metadata"
                 className="modal-video-player"
                 poster={selectedProject.coverImage}
               >
@@ -781,15 +783,33 @@ export default function App() {
           {/* Galeria de Fotos da Equipa / Hackathon (se existir) */}
           {selectedExperience.photos && selectedExperience.photos.length > 0 && (
             <div className="modal-media-block">
-              <h4 className="media-heading">Registo Fotográfico do Evento</h4>
+              <div className="modal-media-header">
+                <h4 className="media-heading">
+                  Registo Fotográfico ({selectedExperience.photos.length} fotos)
+                </h4>
+                <span className="media-subhint">Clique numa foto para ampliar</span>
+              </div>
               <div className="modal-photo-gallery">
                 {selectedExperience.photos.map((p, i) => (
-                  <img
+                  <button
                     key={i}
-                    src={p}
-                    alt={`Foto ${i + 1} de ${selectedExperience.company}`}
-                    className="gallery-photo"
-                  />
+                    type="button"
+                    className="gallery-photo-btn"
+                    onClick={() =>
+                      setEnlargedPhoto({
+                        src: p,
+                        title: `${selectedExperience.company} — Fotografia ${i + 1}`
+                      })
+                    }
+                    title="Clique para ampliar esta foto"
+                  >
+                    <img
+                      src={p}
+                      alt={`Foto ${i + 1} de ${selectedExperience.company}`}
+                      className="gallery-photo"
+                      loading="lazy"
+                    />
+                  </button>
                 ))}
               </div>
             </div>
@@ -798,8 +818,31 @@ export default function App() {
           {/* Certificado Associado à Experiência */}
           {selectedExperience.certificateFile && (
             <div className="modal-media-block">
-              <h4 className="media-heading">Certificado Oficial da Conquista</h4>
-              <div className="cert-preview-box">
+              <div className="modal-media-header">
+                <h4 className="media-heading">Certificado Oficial da Conquista</h4>
+                <span className="media-subhint">Clique para ampliar</span>
+              </div>
+              <div
+                className="cert-preview-box cert-clickable"
+                onClick={() =>
+                  setEnlargedPhoto({
+                    src: selectedExperience.certificateFile!,
+                    title: selectedExperience.certificateLabel || "Certificado Oficial"
+                  })
+                }
+                title="Clique para ampliar o certificado"
+                role="button"
+                tabIndex={0}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter" || e.key === " ") {
+                    e.preventDefault();
+                    setEnlargedPhoto({
+                      src: selectedExperience.certificateFile!,
+                      title: selectedExperience.certificateLabel || "Certificado Oficial"
+                    });
+                  }
+                }}
+              >
                 <img
                   src={selectedExperience.certificateFile}
                   alt={selectedExperience.certificateLabel || "Certificado"}
@@ -888,6 +931,37 @@ export default function App() {
               <Download size={14} /> Descarregar
             </a>
             <button className="btn outline" onClick={() => setSelectedCert(null)}>
+              Fechar
+            </button>
+          </div>
+        </DetailModal>
+      )}
+
+      {/* MODAL 4: Visualização Ampliada de Fotografia / Registo */}
+      {enlargedPhoto && (
+        <DetailModal
+          isOpen={true}
+          onClose={() => setEnlargedPhoto(null)}
+          title={enlargedPhoto.title}
+          badge="Galeria"
+        >
+          <div className="cert-img-container">
+            <img
+              src={enlargedPhoto.src}
+              alt={enlargedPhoto.title}
+              className="cert-full-img"
+            />
+          </div>
+          <div className="modal-actions-footer">
+            <a
+              className="btn solid"
+              href={enlargedPhoto.src}
+              target="_blank"
+              rel="noopener noreferrer"
+            >
+              <ExternalLink size={14} /> Abrir imagem original
+            </a>
+            <button className="btn outline" onClick={() => setEnlargedPhoto(null)}>
               Fechar
             </button>
           </div>

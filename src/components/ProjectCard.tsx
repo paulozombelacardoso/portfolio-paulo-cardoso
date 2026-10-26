@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useRef } from "react";
 import { ExternalLink, ArrowUpRight, Play, Terminal, Layers, Sparkles } from "lucide-react";
 import { Project } from "../data";
 
@@ -8,11 +8,32 @@ interface ProjectCardProps {
 }
 
 export function ProjectCard({ project, onSelect }: ProjectCardProps) {
+  const videoRef = useRef<HTMLVideoElement>(null);
+
   const handleKeyDown = (e: React.KeyboardEvent) => {
     if (e.key === "Enter" || e.key === " ") {
       e.preventDefault();
+      if (videoRef.current) videoRef.current.pause();
       onSelect(project);
     }
+  };
+
+  const handleMouseEnter = () => {
+    if (videoRef.current) {
+      videoRef.current.play().catch(() => {});
+    }
+  };
+
+  const handleMouseLeave = () => {
+    if (videoRef.current) {
+      videoRef.current.pause();
+      videoRef.current.currentTime = 0;
+    }
+  };
+
+  const handleClick = () => {
+    if (videoRef.current) videoRef.current.pause();
+    onSelect(project);
   };
 
   return (
@@ -21,8 +42,10 @@ export function ProjectCard({ project, onSelect }: ProjectCardProps) {
       tabIndex={0}
       role="button"
       aria-haspopup="dialog"
-      onClick={() => onSelect(project)}
+      onClick={handleClick}
       onKeyDown={handleKeyDown}
+      onMouseEnter={handleMouseEnter}
+      onMouseLeave={handleMouseLeave}
     >
       <div className="project-thumb-wrap">
         {project.coverImage ? (
@@ -35,9 +58,11 @@ export function ProjectCard({ project, onSelect }: ProjectCardProps) {
         ) : project.videoUrl ? (
           <div className="project-video-preview">
             <video
-              src={project.videoUrl}
+              ref={videoRef}
+              src={`${project.videoUrl}#t=0.001`}
               muted
               playsInline
+              loop
               preload="metadata"
               className="project-thumb-video"
             />

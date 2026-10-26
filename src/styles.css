@@ -5,9 +5,9 @@
   --fg: #f4f6f8;
   --mut: #8c96a5;
   --mut-dark: #586374;
-  --ac: #0066ff;
-  --ac-hover: #1a75ff;
-  --ac-glow: rgba(0, 102, 255, 0.2);
+  --ac: #268def;
+  --ac-hover: #459ef4;
+  --ac-glow: rgba(38, 141, 239, 0.22);
   --on-ac: #ffffff;
   --border: #1c2331;
   --border-hover: #293447;
@@ -21,9 +21,9 @@
   --fg: #0f172a;
   --mut: #64748b;
   --mut-dark: #94a3b8;
-  --ac: #005ce6;
-  --ac-hover: #004ecc;
-  --ac-glow: rgba(0, 92, 230, 0.12);
+  --ac: #268def;
+  --ac-hover: #1677d2;
+  --ac-glow: rgba(38, 141, 239, 0.15);
   --on-ac: #ffffff;
   --border: #e2e8f0;
   --border-hover: #cbd5e1;
@@ -593,7 +593,7 @@ nav a.act {
 }
 
 .project-card:hover .video-play-hint {
-  background: rgba(0, 102, 255, 0.5);
+  background: rgba(38, 141, 239, 0.45);
 }
 
 .project-thumb-fallback {
@@ -755,6 +755,21 @@ nav a.act {
   transform: translateY(-1px);
 }
 
+.exp-content-grid {
+  display: block;
+}
+
+.exp-item.has-thumb .exp-content-grid {
+  display: grid;
+  grid-template-columns: 1fr 220px;
+  gap: 24px;
+  align-items: center;
+}
+
+.exp-body {
+  min-width: 0;
+}
+
 .exp-meta {
   display: flex;
   align-items: center;
@@ -828,6 +843,91 @@ nav a.act {
   display: flex;
   flex-wrap: wrap;
   gap: 6px;
+}
+
+.exp-card-footer {
+  margin-top: 14px;
+  padding-top: 12px;
+  border-top: 1px solid var(--border);
+}
+
+.exp-cta {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--ac);
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  transition: color 0.15s ease;
+}
+
+.exp-item:hover .exp-cta {
+  color: var(--ac-hover);
+}
+
+.exp-thumb-col {
+  width: 100%;
+}
+
+.exp-thumb-box {
+  position: relative;
+  border-radius: 6px;
+  overflow: hidden;
+  border: 1px solid var(--border);
+  aspect-ratio: 16 / 10;
+  width: 100%;
+  background-color: var(--bg3);
+}
+
+.exp-thumb-img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+  transition: transform 0.25s ease;
+}
+
+.exp-item:hover .exp-thumb-img {
+  transform: scale(1.05);
+}
+
+.exp-thumb-badge {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  background-color: rgba(9, 11, 14, 0.78);
+  backdrop-filter: blur(4px);
+  -webkit-backdrop-filter: blur(4px);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  color: #fff;
+  font-size: 10px;
+  font-weight: 600;
+  padding: 2px 7px;
+  border-radius: 4px;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  pointer-events: none;
+  z-index: 2;
+}
+
+.exp-thumb-overlay {
+  position: absolute;
+  inset: 0;
+  background: color-mix(in srgb, var(--ac) 45%, rgba(0, 0, 0, 0.5));
+  display: grid;
+  place-items: center;
+  color: #ffffff;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.3px;
+  opacity: 0;
+  transition: opacity 0.18s ease;
+  z-index: 3;
+}
+
+.exp-item:hover .exp-thumb-overlay {
+  opacity: 1;
 }
 
 /* 9. Education & Certificates */
@@ -1388,10 +1488,52 @@ nav a.act {
   border: 1px solid var(--border);
 }
 
+.modal-media-header {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 10px;
+}
+
+.modal-media-header .media-heading {
+  margin-bottom: 0;
+}
+
+.media-subhint {
+  font-size: 11px;
+  color: var(--mut);
+}
+
 .modal-photo-gallery {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
   gap: 10px;
+}
+
+.gallery-photo-btn {
+  background: none;
+  border: 1px solid var(--border);
+  padding: 0;
+  margin: 0;
+  cursor: pointer;
+  display: block;
+  width: 100%;
+  border-radius: 6px;
+  overflow: hidden;
+  transition: border-color 0.15s ease, transform 0.15s ease;
+}
+
+.gallery-photo-btn:hover {
+  border-color: var(--ac);
+  transform: translateY(-2px);
+}
+
+.gallery-photo-btn .gallery-photo {
+  border: none;
+  border-radius: 0;
+  display: block;
 }
 
 .gallery-photo {
@@ -1409,6 +1551,17 @@ nav a.act {
   max-height: 380px;
   display: grid;
   place-items: center;
+}
+
+.cert-clickable {
+  cursor: pointer;
+  border: 1px solid var(--border);
+  transition: border-color 0.15s ease, transform 0.15s ease;
+}
+
+.cert-clickable:hover {
+  border-color: var(--ac);
+  transform: translateY(-2px);
 }
 
 .cert-preview-img {
@@ -1518,6 +1671,20 @@ nav a.act {
 
   .profiles-mini-grid {
     grid-template-columns: 1fr;
+  }
+
+  .exp-item.has-thumb .exp-content-grid {
+    grid-template-columns: 1fr;
+    gap: 16px;
+  }
+
+  .exp-thumb-col {
+    order: -1;
+  }
+
+  .exp-thumb-box {
+    aspect-ratio: 16 / 9;
+    max-height: 220px;
   }
 
   .footer {
