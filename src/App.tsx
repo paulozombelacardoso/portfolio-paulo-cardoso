@@ -451,34 +451,52 @@ export default function App() {
               <Award size={18} /> Certificações e Documentos Confirmados
             </h3>
             <div className="certs-grid">
-              {certificatesList.map((c) => (
-                <div
-                  key={c.id}
-                  className="cert-card"
-                  tabIndex={0}
-                  role="button"
-                  onClick={() => setSelectedCert(c)}
-                  onKeyDown={(e) => {
-                    if (e.key === "Enter" || e.key === " ") {
-                      e.preventDefault();
-                      setSelectedCert(c);
-                    }
-                  }}
-                >
-                  <div className="cert-card-header">
-                    <span className="cert-verified">
-                      <CheckCircle2 size={13} /> Confirmado
-                    </span>
-                    <span className="cert-date">{c.date}</span>
+              {certificatesList.map((c) => {
+                const thumb = c.thumbnail || (c.isImage ? c.file : undefined);
+                return (
+                  <div
+                    key={c.id}
+                    className="cert-card"
+                    tabIndex={0}
+                    role="button"
+                    onClick={() => setSelectedCert(c)}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter" || e.key === " ") {
+                        e.preventDefault();
+                        setSelectedCert(c);
+                      }
+                    }}
+                  >
+                    <div className="cert-card-main">
+                      <div className="cert-card-header">
+                        <span className="cert-verified">
+                          <CheckCircle2 size={13} /> Confirmado
+                        </span>
+                        <span className="cert-date">{c.date}</span>
+                      </div>
+                      <h4 className="cert-title">{c.title}</h4>
+                      <p className="cert-issuer">{c.issuer}</p>
+                      <div className="cert-card-action">
+                        <span>Ver documento</span>
+                        <Eye size={13} />
+                      </div>
+                    </div>
+                    {thumb && (
+                      <div className="cert-thumb-wrap">
+                        <img
+                          src={thumb}
+                          alt={`Miniatura de ${c.title}`}
+                          className="cert-thumb-img"
+                          loading="lazy"
+                        />
+                        <div className="cert-thumb-overlay" aria-hidden="true">
+                          <Eye size={14} />
+                        </div>
+                      </div>
+                    )}
                   </div>
-                  <h4 className="cert-title">{c.title}</h4>
-                  <p className="cert-issuer">{c.issuer}</p>
-                  <div className="cert-card-action">
-                    <span>Ver documento</span>
-                    <Eye size={13} />
-                  </div>
-                </div>
-              ))}
+                );
+              })}
             </div>
           </div>
         </section>
