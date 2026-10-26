@@ -546,15 +546,15 @@ nav a.act {
   mask-image: linear-gradient(
     to right,
     transparent 0%,
-    black 32px,
-    black calc(100% - 32px),
+    black 4%,
+    black 96%,
     transparent 100%
   );
   -webkit-mask-image: linear-gradient(
     to right,
     transparent 0%,
-    black 32px,
-    black calc(100% - 32px),
+    black 4%,
+    black 96%,
     transparent 100%
   );
 }

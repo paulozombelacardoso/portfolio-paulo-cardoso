@@ -446,3 +446,28 @@ export const certificatesList: CertificateItem[] = [
     thumbnail: "certificates/thumb_42_transcript.jpg"
   }
 ];
+
+export function getProfile(lang: Lang): Profile {
+  return lang === "en" ? profileEn : profile;
+}
+
+export function getStackCategories(lang: Lang): StackCategory[] {
+  return lang === "en" ? stackCategoriesEn : stackCategories;
+}
+
+export function getProjects(lang: Lang): Project[] {
+  return lang === "en" ? projectsEn : projects;
+}
+
+export function getExperiences(lang: Lang): Experience[] {
+  return lang === "en" ? experiencesEn : experiences;
+}
+
+export function getEducationList(lang: Lang): EducationItem[] {
+  return lang === "en" ? educationListEn : educationList;
+}
+
+export function getCertificatesList(lang: Lang): CertificateItem[] {
+  return lang === "en" ? certificatesListEn : certificatesList;
+}
+
