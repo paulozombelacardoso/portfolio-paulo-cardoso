@@ -18,22 +18,19 @@ export function DetailModal({
   subtitle,
   children
 }: DetailModalProps) {
-  const modalRef = useRef<HTMLDivElement>(null);
+  const modalContentRef = useRef<HTMLDivElement>(null);
   const closeBtnRef = useRef<HTMLButtonElement>(null);
 
   useEffect(() => {
     if (!isOpen) return;
 
-    // Bloquear scroll da página enquanto o modal estiver aberto
     const prevOverflow = document.body.style.overflow;
     document.body.style.overflow = "hidden";
 
-    // Focar o botão de fechar ao abrir para acessibilidade
     const timer = setTimeout(() => {
       closeBtnRef.current?.focus();
     }, 50);
 
-    // Fechar com tecla Escape e gerir teclado
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key === "Escape") {
         e.preventDefault();
@@ -62,17 +59,17 @@ export function DetailModal({
     >
       <div
         className="modal-content"
-        ref={modalRef}
+        ref={modalContentRef}
         onClick={(e) => e.stopPropagation()}
       >
         <button
           ref={closeBtnRef}
           className="modal-close-btn"
           onClick={onClose}
-          aria-label="Fechar modal"
+          aria-label="Fechar"
           title="Fechar (Esc)"
         >
-          <X size={20} />
+          <X size={18} />
         </button>
 
         <header className="modal-header">

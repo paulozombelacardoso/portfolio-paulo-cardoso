@@ -1,5 +1,5 @@
 import React from "react";
-import { Briefcase, Calendar, MapPin, ChevronRight } from "lucide-react";
+import { ArrowUpRight, Calendar, MapPin, Image as ImageIcon } from "lucide-react";
 import { Experience } from "../data";
 
 interface ExperienceCardProps {
@@ -15,54 +15,55 @@ export function ExperienceCard({ experience, onSelect }: ExperienceCardProps) {
     }
   };
 
-  return (
-    <li className="timeline-item">
-      <div
-        className="card interactive-card experience-card"
-        tabIndex={0}
-        role="button"
-        aria-haspopup="dialog"
-        onClick={() => onSelect(experience)}
-        onKeyDown={handleKeyDown}
-      >
-        <div className="card-top-meta">
-          <span className="card-date-badge">
-            <Calendar size={13} /> {experience.period}
-          </span>
-          <span className="card-location-badge">
-            <MapPin size={13} /> {experience.location}
-          </span>
-        </div>
+  const hasPhotos = !!experience.photos?.length || !!experience.certificateFile;
 
-        <div className="exp-card-header">
-          <div className="exp-icon-box">
-            <Briefcase size={18} />
-          </div>
+  return (
+    <div
+      className="exp-item"
+      tabIndex={0}
+      role="button"
+      aria-haspopup="dialog"
+      onClick={() => onSelect(experience)}
+      onKeyDown={handleKeyDown}
+    >
+      <div className="exp-meta">
+        <span className="exp-period">
+          <Calendar size={13} /> {experience.period}
+        </span>
+        <span className="exp-location">
+          <MapPin size={13} /> {experience.location}
+        </span>
+        {hasPhotos && (
+          <span className="exp-has-media" title="Fotografias / Certificado disponíveis">
+            <ImageIcon size={12} /> Galeria
+          </span>
+        )}
+      </div>
+
+      <div className="exp-body">
+        <div className="exp-header">
           <div>
-            <h3>{experience.role}</h3>
+            <h3 className="exp-role">{experience.role}</h3>
             <h4 className="exp-company">{experience.company}</h4>
           </div>
-        </div>
-
-        <p className="exp-summary">{experience.summary}</p>
-
-        <div className="tags" aria-label="Competências e tecnologias">
-          {experience.skills.slice(0, 5).map((s) => (
-            <span key={s} className="tag-i">
-              {s}
-            </span>
-          ))}
-          {experience.skills.length > 5 && (
-            <span className="tag-i muted-tag">+{experience.skills.length - 5}</span>
-          )}
-        </div>
-
-        <div className="card-actions-row">
-          <span className="link-action">
-            Ver detalhes da experiência <ChevronRight size={14} />
+          <span className="exp-arrow" aria-hidden="true">
+            <ArrowUpRight size={18} />
           </span>
         </div>
+
+        <p className="exp-desc">{experience.summary}</p>
+
+        <div className="exp-tags">
+          {experience.tech.slice(0, 5).map((t) => (
+            <span key={t} className="tech-pill">
+              {t}
+            </span>
+          ))}
+          {experience.tech.length > 5 && (
+            <span className="tech-pill more">+{experience.tech.length - 5}</span>
+          )}
+        </div>
       </div>
-    </li>
+    </div>
   );
 }

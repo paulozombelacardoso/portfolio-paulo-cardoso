@@ -1,27 +1,43 @@
 import React from "react";
-import { SkillGroup } from "../data";
+import { Code2, Server, Database, Terminal, Sparkles } from "lucide-react";
+import { StackCategory } from "../data";
 
 interface SkillGroupCardProps {
-  group: SkillGroup;
+  category: StackCategory;
 }
 
-export function SkillGroupCard({ group }: SkillGroupCardProps) {
+export function SkillGroupCard({ category }: SkillGroupCardProps) {
+  const getIcon = (name: string) => {
+    switch (name) {
+      case "Code2":
+        return <Code2 size={18} />;
+      case "Server":
+        return <Server size={18} />;
+      case "Database":
+        return <Database size={18} />;
+      case "Terminal":
+        return <Terminal size={18} />;
+      case "Sparkles":
+        return <Sparkles size={18} />;
+      default:
+        return <Terminal size={18} />;
+    }
+  };
+
   return (
-    <div className="card skill-card">
-      <div className="skill-card-head">
-        <h3>{group.group}</h3>
-        <p className="skill-group-desc">{group.description}</p>
+    <div className="stack-card">
+      <div className="stack-head">
+        <div className="stack-icon-wrap">{getIcon(category.iconName)}</div>
+        <div>
+          <h3 className="stack-category-name">{category.name}</h3>
+          <p className="stack-category-desc">{category.description}</p>
+        </div>
       </div>
 
-      <div className="tags skill-tags" aria-label={`Tecnologias de ${group.group}`}>
-        {group.items.map((item) => (
-          <span
-            key={item.name}
-            className={`tag-i ${item.featured ? "featured" : ""}`}
-            title={item.featured ? `${item.name} (Utilizado em projectos reais)` : item.name}
-          >
-            {item.featured && <span className="featured-dot" aria-hidden="true" />}
-            {item.name}
+      <div className="stack-items">
+        {category.items.map((item) => (
+          <span key={item} className="stack-item-pill">
+            {item}
           </span>
         ))}
       </div>
