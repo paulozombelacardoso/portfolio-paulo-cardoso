@@ -1,4 +1,13 @@
 // Fonte central dos dados profissionais de Paulo Cardoso — Software Engineer
+import type { Lang } from "./i18n";
+import {
+  profileEn,
+  stackCategoriesEn,
+  projectsEn,
+  experiencesEn,
+  educationListEn,
+  certificatesListEn
+} from "./data.en";
 
 export interface Profile {
   name: string;

@@ -5,9 +5,16 @@ import { Project } from "../data";
 interface ProjectCardProps {
   project: Project;
   onSelect: (project: Project) => void;
+  exploreLabel?: string;
+  codeLabel?: string;
 }
 
-export function ProjectCard({ project, onSelect }: ProjectCardProps) {
+export function ProjectCard({
+  project,
+  onSelect,
+  exploreLabel = "Ver detalhes",
+  codeLabel = "Código"
+}: ProjectCardProps) {
   const videoRef = useRef<HTMLVideoElement>(null);
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
@@ -110,7 +117,7 @@ export function ProjectCard({ project, onSelect }: ProjectCardProps) {
         </div>
 
         <div className="project-footer">
-          <span className="explore-text">Ver detalhes</span>
+          <span className="explore-text">{exploreLabel}</span>
           {project.github && (
             <a
               href={project.github}
@@ -118,9 +125,9 @@ export function ProjectCard({ project, onSelect }: ProjectCardProps) {
               rel="noopener noreferrer"
               className="project-github-link"
               onClick={(e) => e.stopPropagation()}
-              title="Ver código no GitHub"
+              title={codeLabel}
             >
-              Código <ExternalLink size={12} />
+              {codeLabel} <ExternalLink size={12} />
             </a>
           )}
         </div>

@@ -17,7 +17,9 @@ import {
   GraduationCap,
   Award,
   CheckCircle2,
-  FileText
+  FileText,
+  Globe,
+  ChevronDown
 } from "lucide-react";
 import {
   profile,
@@ -26,15 +28,23 @@ import {
   experiences,
   educationList,
   certificatesList,
+  getProfile,
+  getStackCategories,
+  getProjects,
+  getExperiences,
+  getEducationList,
+  getCertificatesList,
   Project,
   Experience,
   CertificateItem
 } from "./data";
+import { Lang, translations } from "./i18n";
 import { LeetCodeIcon, CodeforcesIcon } from "./components/Icons";
 import { DetailModal } from "./components/DetailModal";
 import { ProjectCard } from "./components/ProjectCard";
 import { ExperienceCard } from "./components/ExperienceCard";
 import { SkillGroupCard } from "./components/SkillGroupCard";
+import { AboutCardsCarousel } from "./components/AboutCardsCarousel";
 
 type Theme = "system" | "light" | "dark";
 
@@ -66,18 +76,41 @@ function useTheme() {
   return [t, setT] as const;
 }
 
-const navItems = [
-  ["home", "Início"],
-  ["about", "Sobre"],
-  ["stack", "Stack"],
-  ["projects", "Projectos"],
-  ["experience", "Experiência"],
-  ["education", "Formação"],
-  ["contact", "Contacto"]
-] as const;
+function useLanguage() {
+  const [lang, setLang] = useState<Lang>(() => {
+    try {
+      const stored = localStorage.getItem("lang") as Lang;
+      if (stored === "pt" || stored === "en") return stored;
+    } catch {
+      /* ignore */
+    }
+    return "pt";
+  });
+
+  useEffect(() => {
+    document.documentElement.lang = lang;
+    try {
+      localStorage.setItem("lang", lang);
+    } catch {
+      /* ignore */
+    }
+  }, [lang]);
+
+  return [lang, setLang] as const;
+}
 
 export default function App() {
   const [theme, setTheme] = useTheme();
+  const [lang, setLang] = useLanguage();
+  const t = translations[lang];
+
+  const currentProfile = getProfile(lang);
+  const currentStack = getStackCategories(lang);
+  const currentProjects = getProjects(lang);
+  const currentExperiences = getExperiences(lang);
+  const currentEducation = getEducationList(lang);
+  const currentCerts = getCertificatesList(lang);
+
   const [menuOpen, setMenuOpen] = useState(false);
   const [activeSection, setActiveSection] = useState("home");
 
@@ -87,10 +120,31 @@ export default function App() {
   const [selectedCert, setSelectedCert] = useState<CertificateItem | null>(null);
   const [enlargedPhoto, setEnlargedPhoto] = useState<{ src: string; title: string } | null>(null);
 
+  // Instâncias ativas sincronizadas com o idioma selecionado
+  const activeProject = selectedProject
+    ? currentProjects.find((p) => p.id === selectedProject.id) || selectedProject
+    : null;
+  const activeExperience = selectedExperience
+    ? currentExperiences.find((e) => e.id === selectedExperience.id) || selectedExperience
+    : null;
+  const activeCert = selectedCert
+    ? currentCerts.find((c) => c.id === selectedCert.id) || selectedCert
+    : null;
+
   // Estados de formulário e scroll
   const [formErrors, setFormErrors] = useState<Record<string, string>>({});
   const [showScrollTop, setShowScrollTop] = useState(false);
   const [photoError, setPhotoError] = useState(false);
+
+  const navItems = [
+    ["home", t.nav.home],
+    ["about", t.nav.about],
+    ["stack", t.nav.stack],
+    ["projects", t.nav.projects],
+    ["experience", t.nav.experience],
+    ["education", t.nav.education],
+    ["contact", t.nav.contact]
+  ] as const;
 
   useEffect(() => {
     const observer = new IntersectionObserver(
@@ -116,7 +170,7 @@ export default function App() {
       observer.disconnect();
       window.removeEventListener("scroll", handleScroll);
     };
-  }, []);
+  }, [lang]);
 
   const nextTheme = () =>
     setTheme(theme === "dark" ? "light" : theme === "light" ? "system" : "dark");
@@ -130,16 +184,16 @@ export default function App() {
     const message = String(f.get("message") || "").trim();
 
     const errors: Record<string, string> = {};
-    if (name.length < 2) errors.name = "Por favor, indique o seu nome.";
-    if (!/^\S+@\S+\.\S+$/.test(email)) errors.email = "Por favor, indique um email válido.";
-    if (message.length < 10) errors.message = "A mensagem deve conter pelo menos 10 caracteres.";
+    if (name.length < 2) errors.name = t.contact.nameError;
+    if (!/^\S+@\S+\.\S+$/.test(email)) errors.email = t.contact.emailError;
+    if (message.length < 10) errors.message = t.contact.messageError;
 
     setFormErrors(errors);
     if (Object.keys(errors).length > 0) return;
 
-    window.location.href = `mailto:${profile.email}?subject=${encodeURIComponent(
-      `Contacto de ${name} via Portefólio`
-    )}&body=${encodeURIComponent(`${message}\n\nDe: ${name} (${email})`)}`;
+    window.location.href = `mailto:${currentProfile.email}?subject=${encodeURIComponent(
+      t.contact.emailSubject(name)
+    )}&body=${encodeURIComponent(`${message}\n\n${t.contact.emailBodyFrom(name, email)}`)}`;
   };
 
   return (
@@ -165,11 +219,29 @@ export default function App() {
         </nav>
 
         <div className="tools">
+          {/* Seletor de Idioma (PT / EN) */}
+          <div
+            className="lang-select-wrapper"
+            title={lang === "pt" ? "Alternar idioma / Switch language" : "Switch language / Alternar idioma"}
+          >
+            <Globe size={14} className="lang-select-icon" />
+            <select
+              value={lang}
+              onChange={(e) => setLang(e.target.value as Lang)}
+              className="lang-select-btn"
+              aria-label={lang === "pt" ? "Selecionar idioma" : "Select language"}
+            >
+              <option value="pt">PT</option>
+              <option value="en">EN</option>
+            </select>
+            <ChevronDown size={11} className="lang-select-arrow" />
+          </div>
+
           <a
-            href={profile.cvFile}
-            download={profile.cvDownload}
+            href={currentProfile.cvFile}
+            download={currentProfile.cvDownload}
             className="nav-cv-btn"
-            title="Descarregar Currículo em PDF"
+            title={lang === "pt" ? "Descarregar Currículo em PDF" : "Download Resume in PDF"}
           >
             <Download size={14} /> CV
           </a>
@@ -241,32 +313,32 @@ export default function App() {
           <div className="hero-grid">
             <div className="hero-content">
               <div className="hero-badge">
-                <span className="badge-pulse" /> Software Engineer &bull; 42 Luanda
+                <span className="badge-pulse" /> {t.hero.badge}
               </div>
 
-              <h1 className="hero-name">{profile.name}</h1>
-              <h2 className="hero-title">{profile.title}</h2>
+              <h1 className="hero-name">{currentProfile.name}</h1>
+              <h2 className="hero-title">{currentProfile.title}</h2>
 
-              <p className="hero-lead">"{profile.lead}"</p>
+              <p className="hero-lead">"{currentProfile.lead}"</p>
 
-              <p className="hero-bio">{profile.shortBio}</p>
+              <p className="hero-bio">{currentProfile.shortBio}</p>
 
               <div className="hero-actions">
                 <a className="btn solid" href="#projects">
-                  Ver projectos
+                  {t.hero.viewProjects}
                 </a>
                 <a
                   className="btn outline"
-                  href={profile.cvFile}
-                  download={profile.cvDownload}
+                  href={currentProfile.cvFile}
+                  download={currentProfile.cvDownload}
                 >
-                  <Download size={15} /> Descarregar CV
+                  <Download size={15} /> {t.hero.downloadCv}
                 </a>
               </div>
 
               <div className="hero-social-list" aria-label="Redes e contactos">
                 <a
-                  href={profile.githubUrl}
+                  href={currentProfile.githubUrl}
                   target="_blank"
                   rel="noopener noreferrer"
                   className="hero-social-item"
@@ -275,7 +347,7 @@ export default function App() {
                   <Github size={16} /> <span>GitHub</span>
                 </a>
                 <a
-                  href={profile.linkedin}
+                  href={currentProfile.linkedin}
                   target="_blank"
                   rel="noopener noreferrer"
                   className="hero-social-item"
@@ -284,7 +356,7 @@ export default function App() {
                   <Linkedin size={16} /> <span>LinkedIn</span>
                 </a>
                 <a
-                  href={profile.leetcode}
+                  href={currentProfile.leetcode}
                   target="_blank"
                   rel="noopener noreferrer"
                   className="hero-social-item"
@@ -293,7 +365,7 @@ export default function App() {
                   <LeetCodeIcon size={16} /> <span>LeetCode</span>
                 </a>
                 <a
-                  href={profile.codeforces}
+                  href={currentProfile.codeforces}
                   target="_blank"
                   rel="noopener noreferrer"
                   className="hero-social-item"
@@ -302,9 +374,9 @@ export default function App() {
                   <CodeforcesIcon size={16} /> <span>Codeforces</span>
                 </a>
                 <a
-                  href={`mailto:${profile.email}`}
+                  href={`mailto:${currentProfile.email}`}
                   className="hero-social-item"
-                  title="Enviar Email"
+                  title="Email"
                 >
                   <Mail size={16} /> <span>Email</span>
                 </a>
@@ -315,8 +387,8 @@ export default function App() {
               <div className="photo-container">
                 {!photoError ? (
                   <img
-                    src={profile.photo}
-                    alt={`Fotografia de ${profile.name}`}
+                    src={currentProfile.photo}
+                    alt={`Fotografia de ${currentProfile.name}`}
                     className="hero-photo"
                     onError={() => setPhotoError(true)}
                   />
@@ -333,50 +405,46 @@ export default function App() {
         {/* 4. Sobre Mim */}
         <section id="about" className="section">
           <div className="section-head">
-            <span className="section-kicker">Trajectória</span>
-            <h2 className="section-title">Sobre mim</h2>
+            <span className="section-kicker">{t.about.kicker}</span>
+            <h2 className="section-title">{t.about.title}</h2>
           </div>
 
           <div className="about-wrap">
-            <p className="about-text-lead">
-              A minha formação conjuga a disciplina e organização da Informática de Gestão no IMEL com a exigência técnica, autonomia e resolução contínua de problemas da <strong>42 Luanda</strong>.
-            </p>
-            <p className="about-text">
-              Foco-me no desenvolvimento backend estruturado com <strong>NestJS, TypeScript e PostgreSQL</strong>, infraestrutura e conteinerização com <strong>Docker</strong>, e sistemas Unix/Linux de baixo nível em <strong>C e C++</strong>. Integro também modelos de <strong>Inteligência Artificial</strong> (APIs Gemini e Anthropic) para enriquecer aplicações reais com pesquisa semântica e processamento de linguagem natural.
-            </p>
+            <p className="about-text-lead">{t.about.lead}</p>
+            <p className="about-text">{t.about.text}</p>
 
-            <div className="about-meta-row">
-              <div className="meta-card">
-                <span className="meta-number">01</span>
-                <h4>Backend & APIs</h4>
-                <p>Arquitecturas modulares, autenticação JWT/OAuth2 e Clean Architecture.</p>
-              </div>
-              <div className="meta-card">
-                <span className="meta-number">02</span>
-                <h4>DevOps & Linux</h4>
-                <p>Ambientes Docker multi-serviços, redes POSIX e administração de servidores.</p>
-              </div>
-              <div className="meta-card">
-                <span className="meta-number">03</span>
-                <h4>Inteligência Artificial</h4>
-                <p>Pesquisa semântica, engenharia de prompts e participação premiada em hackathons.</p>
-              </div>
-            </div>
+            <AboutCardsCarousel
+              cards={[
+                {
+                  num: "01",
+                  title: t.about.meta1Title,
+                  desc: t.about.meta1Desc
+                },
+                {
+                  num: "02",
+                  title: t.about.meta2Title,
+                  desc: t.about.meta2Desc
+                },
+                {
+                  num: "03",
+                  title: t.about.meta3Title,
+                  desc: t.about.meta3Desc
+                }
+              ]}
+            />
           </div>
         </section>
 
         {/* 5. Stack Tecnológica */}
         <section id="stack" className="section">
           <div className="section-head">
-            <span className="section-kicker">Competências</span>
-            <h2 className="section-title">Stack tecnológica</h2>
-            <p className="section-desc">
-              Tecnologias e ferramentas que utilizo no desenvolvimento diário de software, infraestruturas e APIs.
-            </p>
+            <span className="section-kicker">{t.stack.kicker}</span>
+            <h2 className="section-title">{t.stack.title}</h2>
+            <p className="section-desc">{t.stack.desc}</p>
           </div>
 
           <div className="stack-grid">
-            {stackCategories.map((cat) => (
+            {currentStack.map((cat) => (
               <SkillGroupCard key={cat.name} category={cat} />
             ))}
           </div>
@@ -385,16 +453,20 @@ export default function App() {
         {/* 6. Projectos Técnicos */}
         <section id="projects" className="section">
           <div className="section-head">
-            <span className="section-kicker">Trabalho Real</span>
-            <h2 className="section-title">Projectos em destaque</h2>
-            <p className="section-desc">
-              Seleção de sistemas, infraestruturas e aplicações full-stack com decisões de engenharia documentadas. Clique num projecto para ver detalhes, demonstrações em vídeo e arquitectura.
-            </p>
+            <span className="section-kicker">{t.projects.kicker}</span>
+            <h2 className="section-title">{t.projects.title}</h2>
+            <p className="section-desc">{t.projects.desc}</p>
           </div>
 
           <div className="projects-grid">
-            {projects.map((proj) => (
-              <ProjectCard key={proj.id} project={proj} onSelect={setSelectedProject} />
+            {currentProjects.map((proj) => (
+              <ProjectCard
+                key={proj.id}
+                project={proj}
+                onSelect={setSelectedProject}
+                exploreLabel={t.projects.viewDetails}
+                codeLabel={t.projects.code}
+              />
             ))}
           </div>
         </section>
@@ -402,16 +474,19 @@ export default function App() {
         {/* 7. Experiência Profissional */}
         <section id="experience" className="section">
           <div className="section-head">
-            <span className="section-kicker">Carreira & Inovação</span>
-            <h2 className="section-title">Experiência profissional</h2>
-            <p className="section-desc">
-              Desenvolvimento backend no sector privado e liderança técnica em equipas vencedoras de hackathons de inteligência artificial.
-            </p>
+            <span className="section-kicker">{t.experience.kicker}</span>
+            <h2 className="section-title">{t.experience.title}</h2>
+            <p className="section-desc">{t.experience.desc}</p>
           </div>
 
           <div className="experience-list">
-            {experiences.map((exp) => (
-              <ExperienceCard key={exp.id} experience={exp} onSelect={setSelectedExperience} />
+            {currentExperiences.map((exp) => (
+              <ExperienceCard
+                key={exp.id}
+                experience={exp}
+                onSelect={setSelectedExperience}
+                lang={lang}
+              />
             ))}
           </div>
         </section>
@@ -419,12 +494,12 @@ export default function App() {
         {/* 8. Formação & Certificações */}
         <section id="education" className="section">
           <div className="section-head">
-            <span className="section-kicker">Educação Contínua</span>
-            <h2 className="section-title">Formação e certificados</h2>
+            <span className="section-kicker">{t.education.kicker}</span>
+            <h2 className="section-title">{t.education.title}</h2>
           </div>
 
           <div className="edu-grid">
-            {educationList.map((edu) => (
+            {currentEducation.map((edu) => (
               <div key={edu.school} className="edu-card">
                 <div className="edu-card-top">
                   <div className="edu-icon-wrap">
@@ -448,10 +523,10 @@ export default function App() {
 
           <div className="certs-section">
             <h3 className="certs-heading">
-              <Award size={18} /> Certificações e Documentos Confirmados
+              <Award size={18} /> {t.education.certsHeading}
             </h3>
             <div className="certs-grid">
-              {certificatesList.map((c) => {
+              {currentCerts.map((c) => {
                 const thumb = c.thumbnail || (c.isImage ? c.file : undefined);
                 return (
                   <div
@@ -470,14 +545,14 @@ export default function App() {
                     <div className="cert-card-main">
                       <div className="cert-card-header">
                         <span className="cert-verified">
-                          <CheckCircle2 size={13} /> Confirmado
+                          <CheckCircle2 size={13} /> {t.education.confirmed}
                         </span>
                         <span className="cert-date">{c.date}</span>
                       </div>
                       <h4 className="cert-title">{c.title}</h4>
                       <p className="cert-issuer">{c.issuer}</p>
                       <div className="cert-card-action">
-                        <span>Ver documento</span>
+                        <span>{t.education.viewDoc}</span>
                         <Eye size={13} />
                       </div>
                     </div>
@@ -504,38 +579,34 @@ export default function App() {
         {/* 9. Contacto */}
         <section id="contact" className="section">
           <div className="section-head">
-            <span className="section-kicker">Comunicação</span>
-            <h2 className="section-title">Contacto</h2>
-            <p className="section-desc">
-              Tem um projecto em mente ou procura um Software Engineer para a sua equipa? Estou disponível para colaborar.
-            </p>
+            <span className="section-kicker">{t.contact.kicker}</span>
+            <h2 className="section-title">{t.contact.title}</h2>
+            <p className="section-desc">{t.contact.desc}</p>
           </div>
 
           <div className="contact-grid">
             <div className="contact-info-col">
-              <h3>Canais Directos</h3>
-              <p className="contact-sub">
-                Respondo rapidamente através de qualquer uma das vias abaixo:
-              </p>
+              <h3>{t.contact.directTitle}</h3>
+              <p className="contact-sub">{t.contact.directSub}</p>
 
               <div className="contact-links-box">
-                <a href={`mailto:${profile.email}`} className="contact-link-row">
+                <a href={`mailto:${currentProfile.email}`} className="contact-link-row">
                   <div className="cl-icon">
                     <Mail size={16} />
                   </div>
                   <div>
-                    <span className="cl-label">Email Principal</span>
-                    <span className="cl-val">{profile.email}</span>
+                    <span className="cl-label">{t.contact.emailLabel}</span>
+                    <span className="cl-val">{currentProfile.email}</span>
                   </div>
                 </a>
 
-                <a href={`tel:${profile.phone.replace(/\s+/g, "")}`} className="contact-link-row">
+                <a href={`tel:${currentProfile.phone.replace(/\s+/g, "")}`} className="contact-link-row">
                   <div className="cl-icon">
                     <Phone size={16} />
                   </div>
                   <div>
-                    <span className="cl-label">Telefone / WhatsApp</span>
-                    <span className="cl-val">{profile.phone}</span>
+                    <span className="cl-label">{t.contact.phoneLabel}</span>
+                    <span className="cl-val">{currentProfile.phone}</span>
                   </div>
                 </a>
 
@@ -544,16 +615,16 @@ export default function App() {
                     <MapPin size={16} />
                   </div>
                   <div>
-                    <span className="cl-label">Localização</span>
-                    <span className="cl-val">{profile.location}</span>
+                    <span className="cl-label">{t.contact.locationLabel}</span>
+                    <span className="cl-val">{currentProfile.location}</span>
                   </div>
                 </div>
               </div>
 
-              <h4 className="profiles-title">Perfis em Plataformas Técnicas</h4>
+              <h4 className="profiles-title">{t.contact.profilesTitle}</h4>
               <div className="profiles-mini-grid">
                 <a
-                  href={profile.githubUrl}
+                  href={currentProfile.githubUrl}
                   target="_blank"
                   rel="noopener noreferrer"
                   className="profile-pill"
@@ -562,7 +633,7 @@ export default function App() {
                   <ExternalLink size={11} className="pill-ext" />
                 </a>
                 <a
-                  href={profile.linkedin}
+                  href={currentProfile.linkedin}
                   target="_blank"
                   rel="noopener noreferrer"
                   className="profile-pill"
@@ -571,7 +642,7 @@ export default function App() {
                   <ExternalLink size={11} className="pill-ext" />
                 </a>
                 <a
-                  href={profile.leetcode}
+                  href={currentProfile.leetcode}
                   target="_blank"
                   rel="noopener noreferrer"
                   className="profile-pill"
@@ -580,7 +651,7 @@ export default function App() {
                   <ExternalLink size={11} className="pill-ext" />
                 </a>
                 <a
-                  href={profile.codeforces}
+                  href={currentProfile.codeforces}
                   target="_blank"
                   rel="noopener noreferrer"
                   className="profile-pill"
@@ -592,15 +663,15 @@ export default function App() {
             </div>
 
             <form onSubmit={handleContactSubmit} noValidate className="contact-form-box">
-              <h3>Envie uma Mensagem</h3>
-              <p className="form-sub">Abre o seu cliente de email com a mensagem pronta a enviar.</p>
+              <h3>{t.contact.formTitle}</h3>
+              <p className="form-sub">{t.contact.formSub}</p>
 
               <label className="form-field">
-                <span>Nome</span>
+                <span>{t.contact.nameLabel}</span>
                 <input
                   name="name"
                   type="text"
-                  placeholder="O seu nome ou empresa"
+                  placeholder={t.contact.namePlaceholder}
                   aria-invalid={!!formErrors.name}
                 />
                 {formErrors.name && <em className="field-error">{formErrors.name}</em>}
@@ -611,25 +682,25 @@ export default function App() {
                 <input
                   name="email"
                   type="email"
-                  placeholder="seu.email@exemplo.com"
+                  placeholder={t.contact.emailPlaceholder}
                   aria-invalid={!!formErrors.email}
                 />
                 {formErrors.email && <em className="field-error">{formErrors.email}</em>}
               </label>
 
               <label className="form-field">
-                <span>Mensagem</span>
+                <span>{t.contact.messageLabel}</span>
                 <textarea
                   name="message"
                   rows={4}
-                  placeholder="Descreva a sua proposta, projecto ou questão..."
+                  placeholder={t.contact.messagePlaceholder}
                   aria-invalid={!!formErrors.message}
                 />
                 {formErrors.message && <em className="field-error">{formErrors.message}</em>}
               </label>
 
               <button className="btn solid form-submit" type="submit">
-                <Mail size={15} /> Enviar Mensagem por Email
+                <Mail size={15} /> {t.contact.submitBtn}
               </button>
             </form>
           </div>
@@ -640,28 +711,28 @@ export default function App() {
       <footer className="footer">
         <div className="footer-wrap">
           <div className="footer-left">
-            <span>&copy; {new Date().getFullYear()} <strong>{profile.name}</strong>. Software Engineer.</span>
-            <span className="footer-sub">{profile.location} &bull; 42 Luanda</span>
+            <span>&copy; {new Date().getFullYear()} <strong>{currentProfile.name}</strong>. Software Engineer.</span>
+            <span className="footer-sub">{currentProfile.location} &bull; 42 Luanda &bull; {t.footer.rights}</span>
           </div>
 
           <div className="footer-links">
-            <a href={profile.githubUrl} target="_blank" rel="noopener noreferrer">
+            <a href={currentProfile.githubUrl} target="_blank" rel="noopener noreferrer">
               GitHub
             </a>
             &bull;
-            <a href={profile.linkedin} target="_blank" rel="noopener noreferrer">
+            <a href={currentProfile.linkedin} target="_blank" rel="noopener noreferrer">
               LinkedIn
             </a>
             &bull;
-            <a href={profile.leetcode} target="_blank" rel="noopener noreferrer">
+            <a href={currentProfile.leetcode} target="_blank" rel="noopener noreferrer">
               LeetCode
             </a>
             &bull;
-            <a href={profile.codeforces} target="_blank" rel="noopener noreferrer">
+            <a href={currentProfile.codeforces} target="_blank" rel="noopener noreferrer">
               Codeforces
             </a>
             &bull;
-            <a href={profile.cvFile} download={profile.cvDownload}>
+            <a href={currentProfile.cvFile} download={currentProfile.cvDownload}>
               CV (PDF)
             </a>
           </div>
@@ -673,33 +744,33 @@ export default function App() {
         <button
           className="totop-btn"
           onClick={() => window.scrollTo({ top: 0, behavior: "smooth" })}
-          aria-label="Voltar ao topo"
-          title="Voltar ao topo"
+          aria-label={t.footer.backToTop}
+          title={t.footer.backToTop}
         >
           <ArrowUp size={16} />
         </button>
       )}
 
       {/* MODAL 1: Detalhes do Projecto */}
-      {selectedProject && (
+      {activeProject && (
         <DetailModal
           isOpen={true}
           onClose={() => setSelectedProject(null)}
-          title={selectedProject.name}
-          badge={selectedProject.category}
-          subtitle={selectedProject.subtitle}
+          title={activeProject.name}
+          badge={activeProject.category}
+          subtitle={activeProject.subtitle}
         >
           {/* Demonstração em Vídeo (se existir) */}
-          {selectedProject.videoUrl && (
+          {activeProject.videoUrl && (
             <div className="modal-media-block">
-              <h4 className="media-heading">Demonstração em Vídeo</h4>
+              <h4 className="media-heading">{t.projects.videoDemo}</h4>
               <video
-                src={selectedProject.videoUrl}
+                src={activeProject.videoUrl}
                 controls
                 playsInline
                 preload="metadata"
                 className="modal-video-player"
-                poster={selectedProject.coverImage}
+                poster={activeProject.coverImage}
               >
                 O seu navegador não suporta a reprodução deste vídeo.
               </video>
@@ -707,24 +778,24 @@ export default function App() {
           )}
 
           {/* Imagem de Capa ou Galeria (se existir e não tiver vídeo duplicado) */}
-          {selectedProject.coverImage && !selectedProject.videoUrl && (
+          {activeProject.coverImage && !activeProject.videoUrl && (
             <div className="modal-media-block">
               <img
-                src={selectedProject.coverImage}
-                alt={`Imagem do projecto ${selectedProject.name}`}
+                src={activeProject.coverImage}
+                alt={`Imagem do projecto ${activeProject.name}`}
                 className="modal-cover-img"
               />
             </div>
           )}
 
           {/* Galeria de Fotos Adicionais (ex: IMEL Defesa) */}
-          {selectedProject.galleryImages && selectedProject.galleryImages.length > 1 && (
+          {activeProject.galleryImages && activeProject.galleryImages.length > 1 && (
             <div className="modal-gallery-row">
-              {selectedProject.galleryImages.map((imgSrc, idx) => (
+              {activeProject.galleryImages.map((imgSrc, idx) => (
                 <img
                   key={idx}
                   src={imgSrc}
-                  alt={`Fotografia ${idx + 1} de ${selectedProject.name}`}
+                  alt={`Fotografia ${idx + 1} de ${activeProject.name}`}
                   className="modal-gallery-thumb"
                 />
               ))}
@@ -732,83 +803,86 @@ export default function App() {
           )}
 
           <div className="modal-sec">
-            <h4>Visão Geral</h4>
-            <p>{selectedProject.summary}</p>
+            <h4>{t.projects.overview}</h4>
+            <p>{activeProject.summary}</p>
           </div>
 
           <div className="modal-sec">
-            <h4>Problema & Objectivo</h4>
-            <p>{selectedProject.problem}</p>
+            <h4>{t.projects.problem}</h4>
+            <p>{activeProject.problem}</p>
           </div>
 
           <div className="modal-sec">
-            <h4>Arquitectura & Decisões Técnicas</h4>
-            <p>{selectedProject.architecture}</p>
+            <h4>{t.projects.architecture}</h4>
+            <p>{activeProject.architecture}</p>
           </div>
 
           <div className="modal-sec">
-            <h4>Funcionalidades Implementadas</h4>
+            <h4>{t.projects.features}</h4>
             <ul className="modal-bullet-list">
-              {selectedProject.features.map((f, i) => (
+              {activeProject.features.map((f, i) => (
                 <li key={i}>{f}</li>
               ))}
             </ul>
           </div>
 
           <div className="modal-sec">
-            <h4>Tecnologias Utilizadas</h4>
+            <h4>{t.projects.tech}</h4>
             <div className="modal-tag-cloud">
-              {selectedProject.tech.map((t) => (
-                <span key={t} className="tech-pill active">
-                  {t}
+              {activeProject.tech.map((techItem) => (
+                <span key={techItem} className="tech-pill active">
+                  {techItem}
                 </span>
               ))}
             </div>
           </div>
 
           <div className="modal-sec">
-            <h4>Principais Aprendizagens</h4>
-            <p>{selectedProject.learnings}</p>
+            <h4>{t.projects.learnings}</h4>
+            <p>{activeProject.learnings}</p>
           </div>
 
           <div className="modal-actions-footer">
-            {selectedProject.github && (
+            {activeProject.github && (
               <a
                 className="btn solid"
-                href={selectedProject.github}
+                href={activeProject.github}
                 target="_blank"
                 rel="noopener noreferrer"
               >
-                Ver Repositório no GitHub <ExternalLink size={14} />
+                {t.projects.viewGithub} <ExternalLink size={14} />
               </a>
             )}
             <button className="btn outline" onClick={() => setSelectedProject(null)}>
-              Fechar
+              {t.projects.close}
             </button>
           </div>
         </DetailModal>
       )}
 
       {/* MODAL 2: Detalhes da Experiência */}
-      {selectedExperience && (
+      {activeExperience && (
         <DetailModal
           isOpen={true}
           onClose={() => setSelectedExperience(null)}
-          title={selectedExperience.role}
-          badge={selectedExperience.period}
-          subtitle={`${selectedExperience.company} — ${selectedExperience.location}`}
+          title={activeExperience.role}
+          badge={activeExperience.period}
+          subtitle={`${activeExperience.company} — ${activeExperience.location}`}
         >
           {/* Galeria de Fotos da Equipa / Hackathon (se existir) */}
-          {selectedExperience.photos && selectedExperience.photos.length > 0 && (
+          {activeExperience.photos && activeExperience.photos.length > 0 && (
             <div className="modal-media-block">
               <div className="modal-media-header">
                 <h4 className="media-heading">
-                  Registo Fotográfico ({selectedExperience.photos.length} fotos)
+                  {t.experience.galleryHeading} ({activeExperience.photos.length}{" "}
+                  {activeExperience.photos.length === 1
+                    ? t.experience.photoUnitSingle
+                    : t.experience.photoUnitPlural})
                 </h4>
-                <span className="media-subhint">Clique numa foto para ampliar</span>
+                <span className="media-subhint">{t.experience.clickToEnlarge}</span>
               </div>
               <div className="modal-photo-gallery">
-                {selectedExperience.photos.map((p, i) => (
+                {activeExperience.photos.map((p, i) => (
                   <button
                     key={i}
                     type="button"
@@ -816,14 +890,14 @@ export default function App() {
                     onClick={() =>
                       setEnlargedPhoto({
                         src: p,
-                        title: `${selectedExperience.company} — Fotografia ${i + 1}`
+                        title: `${activeExperience.company} — ${lang === "en" ? "Photo" : "Fotografia"} ${i + 1}`
                       })
                     }
-                    title="Clique para ampliar esta foto"
+                    title={t.experience.clickToEnlarge}
                   >
                     <img
                       src={p}
-                      alt={`Foto ${i + 1} de ${selectedExperience.company}`}
+                      alt={`Foto ${i + 1} de ${activeExperience.company}`}
                       className="gallery-photo"
                       loading="lazy"
                     />
@@ -834,36 +908,40 @@ export default function App() {
           )}
 
           {/* Certificado Associado à Experiência */}
-          {selectedExperience.certificateFile && (
+          {activeExperience.certificateFile && (
             <div className="modal-media-block">
               <div className="modal-media-header">
-                <h4 className="media-heading">Certificado Oficial da Conquista</h4>
-                <span className="media-subhint">Clique para ampliar</span>
+                <h4 className="media-heading">{t.experience.certHeading}</h4>
+                <span className="media-subhint">{t.experience.clickToEnlarge}</span>
               </div>
               <div
                 className="cert-preview-box cert-clickable"
                 onClick={() =>
                   setEnlargedPhoto({
-                    src: selectedExperience.certificateFile!,
-                    title: selectedExperience.certificateLabel || "Certificado Oficial"
+                    src: activeExperience.certificateFile!,
+                    title:
+                      activeExperience.certificateLabel ||
+                      (lang === "en" ? "Official Certificate" : "Certificado Oficial")
                   })
                 }
-                title="Clique para ampliar o certificado"
+                title={t.experience.clickToEnlarge}
                 role="button"
                 tabIndex={0}
                 onKeyDown={(e) => {
                   if (e.key === "Enter" || e.key === " ") {
                     e.preventDefault();
                     setEnlargedPhoto({
-                      src: selectedExperience.certificateFile!,
-                      title: selectedExperience.certificateLabel || "Certificado Oficial"
+                      src: activeExperience.certificateFile!,
+                      title:
+                        activeExperience.certificateLabel ||
+                        (lang === "en" ? "Official Certificate" : "Certificado Oficial")
                     });
                   }
                 }}
               >
                 <img
-                  src={selectedExperience.certificateFile}
-                  alt={selectedExperience.certificateLabel || "Certificado"}
+                  src={activeExperience.certificateFile}
+                  alt={activeExperience.certificateLabel || (lang === "en" ? "Certificate" : "Certificado")}
                   className="cert-preview-img"
                 />
               </div>
@@ -871,25 +949,25 @@ export default function App() {
           )}
 
           <div className="modal-sec">
-            <h4>Resumo da Actuação</h4>
-            <p>{selectedExperience.summary}</p>
+            <h4>{t.experience.overview}</h4>
+            <p>{activeExperience.summary}</p>
           </div>
 
           <div className="modal-sec">
-            <h4>Responsabilidades & Realizações Técnicas</h4>
+            <h4>{t.experience.responsibilities}</h4>
             <ul className="modal-bullet-list">
-              {selectedExperience.bullets.map((b, i) => (
+              {activeExperience.bullets.map((b, i) => (
                 <li key={i}>{b}</li>
               ))}
             </ul>
           </div>
 
           <div className="modal-sec">
-            <h4>Competências Aplicadas</h4>
+            <h4>{t.experience.skills}</h4>
             <div className="modal-tag-cloud">
-              {selectedExperience.tech.map((t) => (
-                <span key={t} className="tech-pill active">
-                  {t}
+              {activeExperience.tech.map((tItem) => (
+                <span key={tItem} className="tech-pill active">
+                  {tItem}
                 </span>
               ))}
             </div>
@@ -897,35 +975,35 @@ export default function App() {
 
           <div className="modal-actions-footer">
             <button className="btn solid" onClick={() => setSelectedExperience(null)}>
-              Fechar
+              {t.experience.close}
             </button>
           </div>
         </DetailModal>
       )}
 
       {/* MODAL 3: Visualização de Certificado */}
-      {selectedCert && (
+      {activeCert && (
         <DetailModal
           isOpen={true}
           onClose={() => setSelectedCert(null)}
-          title={selectedCert.title}
-          badge={selectedCert.date}
-          subtitle={selectedCert.issuer}
+          title={activeCert.title}
+          badge={activeCert.date}
+          subtitle={activeCert.issuer}
         >
           <div className="cert-modal-body">
-            {selectedCert.isImage ? (
+            {activeCert.isImage ? (
               <div className="cert-img-container">
                 <img
-                  src={selectedCert.file}
-                  alt={selectedCert.title}
+                  src={activeCert.file}
+                  alt={activeCert.title}
                   className="cert-full-img"
                 />
               </div>
             ) : (
               <div className="cert-pdf-container">
                 <iframe
-                  src={selectedCert.file}
-                  title={selectedCert.title}
+                  src={activeCert.file}
+                  title={activeCert.title}
                   className="cert-pdf-iframe"
                 />
               </div>
@@ -935,21 +1013,21 @@ export default function App() {
           <div className="modal-actions-footer">
             <a
               className="btn solid"
-              href={selectedCert.file}
+              href={activeCert.file}
               target="_blank"
               rel="noopener noreferrer"
             >
-              <ExternalLink size={14} /> Abrir documento original
+              <ExternalLink size={14} /> {t.education.openOriginal}
             </a>
             <a
               className="btn outline"
-              href={selectedCert.file}
+              href={activeCert.file}
               download
             >
-              <Download size={14} /> Descarregar
+              <Download size={14} /> {t.education.download}
             </a>
             <button className="btn outline" onClick={() => setSelectedCert(null)}>
-              Fechar
+              {t.education.close}
             </button>
           </div>
         </DetailModal>
@@ -961,7 +1039,7 @@ export default function App() {
           isOpen={true}
           onClose={() => setEnlargedPhoto(null)}
           title={enlargedPhoto.title}
-          badge="Galeria"
+          badge={lang === "en" ? "Gallery" : "Galeria"}
         >
           <div className="cert-img-container">
             <img
@@ -977,10 +1055,10 @@ export default function App() {
               target="_blank"
               rel="noopener noreferrer"
             >
-              <ExternalLink size={14} /> Abrir imagem original
+              <ExternalLink size={14} /> {lang === "en" ? "Open original image" : "Abrir imagem original"}
             </a>
             <button className="btn outline" onClick={() => setEnlargedPhoto(null)}>
-              Fechar
+              {t.projects.close}
             </button>
           </div>
         </DetailModal>

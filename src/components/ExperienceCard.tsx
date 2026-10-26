@@ -5,9 +5,10 @@ import { Experience } from "../data";
 interface ExperienceCardProps {
   experience: Experience;
   onSelect: (exp: Experience) => void;
+  lang?: "pt" | "en";
 }
 
-export function ExperienceCard({ experience, onSelect }: ExperienceCardProps) {
+export function ExperienceCard({ experience, onSelect, lang = "pt" }: ExperienceCardProps) {
   const handleKeyDown = (e: React.KeyboardEvent) => {
     if (e.key === "Enter" || e.key === " ") {
       e.preventDefault();
@@ -17,6 +18,7 @@ export function ExperienceCard({ experience, onSelect }: ExperienceCardProps) {
 
   const coverPhoto = experience.photos?.[0];
   const photoCount = experience.photos?.length || 0;
+  const isEn = lang === "en";
 
   return (
     <article
@@ -37,8 +39,8 @@ export function ExperienceCard({ experience, onSelect }: ExperienceCardProps) {
               <MapPin size={13} /> {experience.location}
             </span>
             {photoCount > 0 && (
-              <span className="exp-has-media" title="Fotografias disponíveis">
-                <ImageIcon size={12} /> {photoCount} {photoCount === 1 ? "foto" : "fotos"}
+              <span className="exp-has-media" title={isEn ? "Photos available" : "Fotografias disponíveis"}>
+                <ImageIcon size={12} /> {photoCount} {isEn ? (photoCount === 1 ? "photo" : "photos") : (photoCount === 1 ? "foto" : "fotos")}
               </span>
             )}
           </div>
@@ -69,7 +71,11 @@ export function ExperienceCard({ experience, onSelect }: ExperienceCardProps) {
           <div className="exp-card-footer">
             <span className="exp-cta">
               {photoCount > 0
-                ? `Ver detalhes e galeria (${photoCount} ${photoCount === 1 ? "foto" : "fotos"})`
+                ? isEn
+                  ? `View details & gallery (${photoCount} ${photoCount === 1 ? "photo" : "photos"})`
+                  : `Ver detalhes e galeria (${photoCount} ${photoCount === 1 ? "foto" : "fotos"})`
+                : isEn
+                ? "View full details"
                 : "Ver detalhes completos"}
             </span>
           </div>
@@ -80,16 +86,20 @@ export function ExperienceCard({ experience, onSelect }: ExperienceCardProps) {
             <div className="exp-thumb-box">
               <img
                 src={coverPhoto}
-                alt={`Registo fotográfico de ${experience.company}`}
+                alt={`${isEn ? "Photo of" : "Registo de"} ${experience.company}`}
                 className="exp-thumb-img"
                 loading="lazy"
               />
               <div className="exp-thumb-badge">
                 <ImageIcon size={12} />
-                <span>{photoCount > 1 ? `1/${photoCount} fotos` : "1 foto"}</span>
+                <span>
+                  {photoCount > 1
+                    ? `${1}/${photoCount} ${isEn ? "photos" : "fotos"}`
+                    : `1 ${isEn ? "photo" : "foto"}`}
+                </span>
               </div>
               <div className="exp-thumb-overlay" aria-hidden="true">
-                <span>Ver todas as fotos</span>
+                <span>{isEn ? "View all photos" : "Ver todas as fotos"}</span>
               </div>
             </div>
           </div>
