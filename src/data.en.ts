@@ -255,7 +255,13 @@ export const experiencesEn: Experience[] = [
       "Pitched the solution to an expert jury, winning first place in the competition."
     ],
     tech: ["Artificial Intelligence", "Software Architecture", "Data Analysis", "Agile Prototyping"],
-    photos: ["hackton_Turismo/fts/1.jpg", "hackton_Turismo/fts/2.jpg", "hackton_Turismo/fts/3.jpg"],
+    photos: [
+      "hackton_Turismo/fts/1.jpg",
+      "hackton_Turismo/fts/2.jpg",
+      "hackton_Turismo/fts/3.jpg",
+      "hackton_Turismo/fts/4.jpg",
+      "hackton_Turismo/fts/5.jpg"
+    ],
     certificateFile: "certificates/1785149446894.jpg",
     certificateLabel: "Certificate of Successful Participation — Sustainable Tourism Hackathon"
   },
@@ -274,7 +280,12 @@ export const experiencesEn: Experience[] = [
       "Applied agile product development methodologies in a multidisciplinary team."
     ],
     tech: ["Artificial Intelligence", "Innovation", "Technical Architecture", "Incubation"],
-    photos: ["hackton_Tigra/1.jpg", "hackton_Tigra/2.jpg", "hackton_Tigra/3.jpg"],
+    photos: [
+      "hackton_Tigra/1.jpg",
+      "hackton_Tigra/2.jpg",
+      "hackton_Tigra/3.jpg",
+      "hackton_Tigra/4.png"
+    ],
     certificateFile: "certificates/TigraCubs.jpg",
     certificateLabel: "Tigra Cubs 2026 Certificate — Starts with You"
   }
