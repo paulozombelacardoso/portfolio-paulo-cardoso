@@ -1,19 +1,24 @@
 import React, { useRef } from "react";
 import { ExternalLink, ArrowUpRight, Play, Terminal, Layers, Sparkles } from "lucide-react";
 import { Project } from "../data";
+import { getTechIconUrl, getTechSlug } from "../techIcons";
 
 interface ProjectCardProps {
   project: Project;
   onSelect: (project: Project) => void;
   exploreLabel?: string;
   codeLabel?: string;
+  className?: string;
+  style?: React.CSSProperties;
 }
 
 export function ProjectCard({
   project,
   onSelect,
   exploreLabel = "Ver detalhes",
-  codeLabel = "Código"
+  codeLabel = "Código",
+  className = "",
+  style
 }: ProjectCardProps) {
   const videoRef = useRef<HTMLVideoElement>(null);
 
@@ -45,7 +50,8 @@ export function ProjectCard({
 
   return (
     <article
-      className="project-card"
+      className={`project-card ${className}`}
+      style={style}
       tabIndex={0}
       role="button"
       aria-haspopup="dialog"
@@ -106,11 +112,25 @@ export function ProjectCard({
         <p className="project-desc">{project.summary}</p>
 
         <div className="project-tags" aria-label="Tecnologias">
-          {project.tech.slice(0, 4).map((t) => (
-            <span key={t} className="tech-pill">
-              {t}
-            </span>
-          ))}
+          {project.tech.slice(0, 4).map((t) => {
+            const iconUrl = getTechIconUrl(t);
+            const slug = getTechSlug(t);
+            return (
+              <span key={t} className="tech-pill" data-tech={slug}>
+                {iconUrl && (
+                  <img
+                    src={iconUrl}
+                    alt=""
+                    aria-hidden="true"
+                    className="tech-pill-icon"
+                    data-tech={slug}
+                    loading="lazy"
+                  />
+                )}
+                <span>{t}</span>
+              </span>
+            );
+          })}
           {project.tech.length > 4 && (
             <span className="tech-pill more">+{project.tech.length - 4}</span>
           )}

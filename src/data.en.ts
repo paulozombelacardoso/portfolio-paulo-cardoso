@@ -4,6 +4,11 @@ export const profileEn: Profile = {
   name: "Paulo Cardoso",
   title: "Software Engineer | Backend & Systems",
   lead: "I build software solutions, APIs and systems focusing on architecture, performance and problem-solving.",
+  rotatingLeads: [
+    "I build software solutions, APIs and systems focusing on architecture, performance and problem-solving.",
+    "I build systems. I solve problems. I optimize solutions.",
+    "I transform technical challenges into scalable solutions."
+  ],
   shortBio: "",
   location: "Luanda, Angola",
   email: "paulozombelacardoso@gmail.com",

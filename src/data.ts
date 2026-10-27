@@ -13,6 +13,7 @@ export interface Profile {
   name: string;
   title: string;
   lead: string;
+  rotatingLeads?: string[];
   shortBio: string;
   location: string;
   email: string;
@@ -31,6 +32,11 @@ export const profile: Profile = {
   name: "Paulo Cardoso",
   title: "Software Engineer | Backend & Systems",
   lead: "Construo soluções de software, APIs e sistemas com foco em arquitectura, desempenho e resolução de problemas.",
+  rotatingLeads: [
+    "Construo soluções de software, APIs e sistemas com foco em arquitectura, desempenho e resolução de problemas.",
+    "Construo sistemas. Resolvo problemas. Optimizo soluções.",
+    "Transformo desafios técnicos em soluções escaláveis."
+  ],
   shortBio:
     "",
   location: "Luanda, Angola",

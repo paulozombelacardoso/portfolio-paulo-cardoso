@@ -45,6 +45,9 @@ import { ProjectCard } from "./components/ProjectCard";
 import { ExperienceCard } from "./components/ExperienceCard";
 import { SkillGroupCard } from "./components/SkillGroupCard";
 import { AboutCardsCarousel } from "./components/AboutCardsCarousel";
+import { AnimatedLead } from "./components/AnimatedLead";
+import { useScrollReveal } from "./hooks/useScrollReveal";
+import { getTechIconUrl, getTechSlug } from "./techIcons";
 
 type Theme = "system" | "light" | "dark";
 
@@ -135,6 +138,9 @@ export default function App() {
   const [formErrors, setFormErrors] = useState<Record<string, string>>({});
   const [showScrollTop, setShowScrollTop] = useState(false);
   const [photoError, setPhotoError] = useState(false);
+
+  // Ativação da animação suave de subida ao fazer scroll
+  useScrollReveal([lang, currentStack, currentProjects, currentExperiences, currentEducation, currentCerts]);
 
   const navItems = [
     ["home", t.nav.home],
@@ -319,7 +325,13 @@ export default function App() {
               <h1 className="hero-name">{currentProfile.name}</h1>
               <h2 className="hero-title">{currentProfile.title}</h2>
 
-              <p className="hero-lead">"{currentProfile.lead}"</p>
+              <AnimatedLead
+                phrases={
+                  currentProfile.rotatingLeads && currentProfile.rotatingLeads.length > 0
+                    ? currentProfile.rotatingLeads
+                    : [currentProfile.lead]
+                }
+              />
 
               <p className="hero-bio">{currentProfile.shortBio}</p>
 
@@ -444,8 +456,13 @@ export default function App() {
           </div>
 
           <div className="stack-grid">
-            {currentStack.map((cat) => (
-              <SkillGroupCard key={cat.name} category={cat} />
+            {currentStack.map((cat, idx) => (
+              <SkillGroupCard
+                key={cat.name}
+                category={cat}
+                className="reveal-card"
+                style={{ "--reveal-delay": `${(idx % 3) * 90}ms` } as React.CSSProperties}
+              />
             ))}
           </div>
         </section>
@@ -459,13 +476,15 @@ export default function App() {
           </div>
 
           <div className="projects-grid">
-            {currentProjects.map((proj) => (
+            {currentProjects.map((proj, idx) => (
               <ProjectCard
                 key={proj.id}
                 project={proj}
                 onSelect={setSelectedProject}
                 exploreLabel={t.projects.viewDetails}
                 codeLabel={t.projects.code}
+                className="reveal-card"
+                style={{ "--reveal-delay": `${(idx % 2) * 110}ms` } as React.CSSProperties}
               />
             ))}
           </div>
@@ -480,12 +499,14 @@ export default function App() {
           </div>
 
           <div className="experience-list">
-            {currentExperiences.map((exp) => (
+            {currentExperiences.map((exp, idx) => (
               <ExperienceCard
                 key={exp.id}
                 experience={exp}
                 onSelect={setSelectedExperience}
                 lang={lang}
+                className="reveal-card"
+                style={{ "--reveal-delay": `${(idx % 2) * 100}ms` } as React.CSSProperties}
               />
             ))}
           </div>
@@ -499,8 +520,12 @@ export default function App() {
           </div>
 
           <div className="edu-grid">
-            {currentEducation.map((edu) => (
-              <div key={edu.school} className="edu-card">
+            {currentEducation.map((edu, idx) => (
+              <div
+                key={edu.school}
+                className="edu-card reveal-card"
+                style={{ "--reveal-delay": `${(idx % 3) * 90}ms` } as React.CSSProperties}
+              >
                 <div className="edu-card-top">
                   <div className="edu-icon-wrap">
                     <GraduationCap size={20} />
@@ -526,12 +551,13 @@ export default function App() {
               <Award size={18} /> {t.education.certsHeading}
             </h3>
             <div className="certs-grid">
-              {currentCerts.map((c) => {
+              {currentCerts.map((c, idx) => {
                 const thumb = c.thumbnail || (c.isImage ? c.file : undefined);
                 return (
                   <div
                     key={c.id}
-                    className="cert-card"
+                    className="cert-card reveal-card"
+                    style={{ "--reveal-delay": `${(idx % 4) * 80}ms` } as React.CSSProperties}
                     tabIndex={0}
                     role="button"
                     onClick={() => setSelectedCert(c)}
@@ -843,11 +869,25 @@ export default function App() {
           <div className="modal-sec">
             <h4>{t.projects.tech}</h4>
             <div className="modal-tag-cloud">
-              {activeProject.tech.map((techItem) => (
-                <span key={techItem} className="tech-pill active">
-                  {techItem}
-                </span>
-              ))}
+              {activeProject.tech.map((techItem) => {
+                const iconUrl = getTechIconUrl(techItem);
+                const slug = getTechSlug(techItem);
+                return (
+                  <span key={techItem} className="tech-pill active" data-tech={slug}>
+                    {iconUrl && (
+                      <img
+                        src={iconUrl}
+                        alt=""
+                        aria-hidden="true"
+                        className="tech-pill-icon"
+                        data-tech={slug}
+                        loading="lazy"
+                      />
+                    )}
+                    <span>{techItem}</span>
+                  </span>
+                );
+              })}
             </div>
           </div>
 
@@ -979,11 +1019,25 @@ export default function App() {
           <div className="modal-sec">
             <h4>{t.experience.skills}</h4>
             <div className="modal-tag-cloud">
-              {activeExperience.tech.map((tItem) => (
-                <span key={tItem} className="tech-pill active">
-                  {tItem}
-                </span>
-              ))}
+              {activeExperience.tech.map((tItem) => {
+                const iconUrl = getTechIconUrl(tItem);
+                const slug = getTechSlug(tItem);
+                return (
+                  <span key={tItem} className="tech-pill active" data-tech={slug}>
+                    {iconUrl && (
+                      <img
+                        src={iconUrl}
+                        alt=""
+                        aria-hidden="true"
+                        className="tech-pill-icon"
+                        data-tech={slug}
+                        loading="lazy"
+                      />
+                    )}
+                    <span>{tItem}</span>
+                  </span>
+                );
+              })}
             </div>
           </div>
 

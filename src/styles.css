@@ -348,12 +348,56 @@ nav a.act {
   margin: 0 0 18px;
 }
 
+.hero-lead-wrapper {
+  min-height: 56px;
+  display: flex;
+  align-items: flex-start;
+  margin: 0 0 16px;
+}
+
 .hero-lead {
   font-size: 16px;
   color: var(--fg);
   line-height: 1.6;
-  margin: 0 0 14px;
+  margin: 0;
   font-weight: 500;
+  display: inline;
+}
+
+.hero-lead-quote {
+  color: var(--ac);
+  font-weight: 600;
+  opacity: 0.85;
+}
+
+.hero-lead-text {
+  color: var(--fg);
+}
+
+.hero-lead-cursor {
+  display: inline-block;
+  width: 2px;
+  height: 1.15em;
+  background-color: var(--ac);
+  margin: 0 3px;
+  vertical-align: -2px;
+  animation: heroLeadBlink 0.85s infinite;
+  box-shadow: 0 0 8px var(--ac-glow);
+}
+
+@keyframes heroLeadBlink {
+  0%, 100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0;
+  }
+}
+
+@media (max-width: 640px) {
+  .hero-lead-wrapper {
+    min-height: 78px;
+  }
 }
 
 .hero-bio {
@@ -633,6 +677,24 @@ nav a.act {
 }
 
 /* 6. Stack Section */
+/* Animação suave de subida ao fazer scroll (Scroll-reveal) */
+.reveal-card {
+  opacity: 0;
+  transform: translateY(28px);
+  transition:
+    opacity 0.65s cubic-bezier(0.16, 1, 0.3, 1),
+    transform 0.65s cubic-bezier(0.16, 1, 0.3, 1),
+    border-color 0.25s ease,
+    box-shadow 0.25s ease;
+  transition-delay: var(--reveal-delay, 0ms), var(--reveal-delay, 0ms), 0ms, 0ms;
+  will-change: transform, opacity;
+}
+
+.reveal-card.is-visible {
+  opacity: 1;
+  transform: translateY(0);
+}
+
 .stack-grid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
@@ -647,11 +709,19 @@ nav a.act {
   display: flex;
   flex-direction: column;
   gap: 16px;
-  transition: border-color 0.15s ease;
+  position: relative;
+  transition:
+    transform 0.25s cubic-bezier(0.16, 1, 0.3, 1),
+    border-color 0.25s ease,
+    box-shadow 0.25s ease,
+    background-color 0.25s ease;
 }
 
-.stack-card:hover {
-  border-color: var(--border-hover);
+.stack-card:hover,
+.reveal-card.is-visible.stack-card:hover {
+  transform: translateY(-6px);
+  border-color: var(--ac);
+  box-shadow: 0 14px 30px var(--ac-glow), 0 0 0 1px var(--ac);
 }
 
 .stack-head {
@@ -694,11 +764,36 @@ nav a.act {
 
 .stack-item-pill {
   font-size: 12px;
-  padding: 3px 9px;
-  border-radius: 4px;
+  padding: 4px 10px;
+  border-radius: 5px;
   background-color: var(--bg);
   border: 1px solid var(--border);
   color: var(--fg);
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  transition: border-color 0.2s ease, background-color 0.2s ease, transform 0.2s ease;
+}
+
+.stack-item-pill:hover {
+  border-color: var(--ac);
+  background-color: var(--bg3);
+  transform: translateY(-1px);
+}
+
+.stack-pill-icon,
+.tech-pill-icon {
+  width: 14px;
+  height: 14px;
+  object-fit: contain;
+  flex-shrink: 0;
+  display: inline-block;
+  vertical-align: middle;
+}
+
+[data-theme="dark"] .stack-pill-icon[data-tech*="express"],
+[data-theme="dark"] .tech-pill-icon[data-tech*="express"] {
+  filter: invert(1) brightness(1.2);
 }
 
 /* 7. Projects Section (2 columns on desktop) */
@@ -716,12 +811,18 @@ nav a.act {
   cursor: pointer;
   display: flex;
   flex-direction: column;
-  transition: border-color 0.15s ease, transform 0.15s ease;
+  position: relative;
+  transition:
+    transform 0.25s cubic-bezier(0.16, 1, 0.3, 1),
+    border-color 0.25s ease,
+    box-shadow 0.25s ease;
 }
 
-.project-card:hover {
+.project-card:hover,
+.reveal-card.is-visible.project-card:hover {
   border-color: var(--ac);
-  transform: translateY(-2px);
+  transform: translateY(-6px);
+  box-shadow: 0 16px 36px var(--ac-glow), 0 0 0 1px var(--ac);
 }
 
 .project-thumb-wrap {
@@ -860,11 +961,19 @@ nav a.act {
 
 .tech-pill {
   font-size: 11px;
-  padding: 2px 8px;
+  padding: 3px 8px;
   border-radius: 4px;
   background-color: var(--bg);
   border: 1px solid var(--border);
   color: var(--fg);
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  transition: border-color 0.15s ease, background-color 0.15s ease, transform 0.15s ease;
+}
+
+.tech-pill:hover {
+  border-color: var(--border-hover);
 }
 
 .tech-pill.active {
@@ -919,12 +1028,18 @@ nav a.act {
   border-radius: 8px;
   padding: 22px;
   cursor: pointer;
-  transition: border-color 0.15s ease, transform 0.15s ease;
+  position: relative;
+  transition:
+    transform 0.25s cubic-bezier(0.16, 1, 0.3, 1),
+    border-color 0.25s ease,
+    box-shadow 0.25s ease;
 }
 
-.exp-item:hover {
+.exp-item:hover,
+.reveal-card.is-visible.exp-item:hover {
   border-color: var(--ac);
-  transform: translateY(-1px);
+  transform: translateY(-5px);
+  box-shadow: 0 14px 32px var(--ac-glow), 0 0 0 1px var(--ac);
 }
 
 .exp-content-grid {

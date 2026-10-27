@@ -1,12 +1,15 @@
 import React from "react";
 import { Code2, Server, Database, Terminal, Sparkles } from "lucide-react";
 import { StackCategory } from "../data";
+import { getTechIconUrl, getTechSlug } from "../techIcons";
 
 interface SkillGroupCardProps {
   category: StackCategory;
+  className?: string;
+  style?: React.CSSProperties;
 }
 
-export function SkillGroupCard({ category }: SkillGroupCardProps) {
+export function SkillGroupCard({ category, className = "", style }: SkillGroupCardProps) {
   const getIcon = (name: string) => {
     switch (name) {
       case "Code2":
@@ -25,7 +28,7 @@ export function SkillGroupCard({ category }: SkillGroupCardProps) {
   };
 
   return (
-    <div className="stack-card">
+    <div className={`stack-card ${className}`} style={style}>
       <div className="stack-head">
         <div className="stack-icon-wrap">{getIcon(category.iconName)}</div>
         <div>
@@ -35,11 +38,25 @@ export function SkillGroupCard({ category }: SkillGroupCardProps) {
       </div>
 
       <div className="stack-items">
-        {category.items.map((item) => (
-          <span key={item} className="stack-item-pill">
-            {item}
-          </span>
-        ))}
+        {category.items.map((item) => {
+          const iconUrl = getTechIconUrl(item);
+          const slug = getTechSlug(item);
+          return (
+            <span key={item} className="stack-item-pill" data-tech={slug}>
+              {iconUrl && (
+                <img
+                  src={iconUrl}
+                  alt=""
+                  aria-hidden="true"
+                  className="stack-pill-icon"
+                  data-tech={slug}
+                  loading="lazy"
+                />
+              )}
+              <span>{item}</span>
+            </span>
+          );
+        })}
       </div>
     </div>
   );

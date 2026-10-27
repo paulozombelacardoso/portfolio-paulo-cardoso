@@ -1,14 +1,23 @@
 import React from "react";
 import { ArrowUpRight, Calendar, MapPin, Image as ImageIcon } from "lucide-react";
 import { Experience } from "../data";
+import { getTechIconUrl, getTechSlug } from "../techIcons";
 
 interface ExperienceCardProps {
   experience: Experience;
   onSelect: (exp: Experience) => void;
   lang?: "pt" | "en";
+  className?: string;
+  style?: React.CSSProperties;
 }
 
-export function ExperienceCard({ experience, onSelect, lang = "pt" }: ExperienceCardProps) {
+export function ExperienceCard({
+  experience,
+  onSelect,
+  lang = "pt",
+  className = "",
+  style
+}: ExperienceCardProps) {
   const handleKeyDown = (e: React.KeyboardEvent) => {
     if (e.key === "Enter" || e.key === " ") {
       e.preventDefault();
@@ -22,7 +31,8 @@ export function ExperienceCard({ experience, onSelect, lang = "pt" }: Experience
 
   return (
     <article
-      className={`exp-item ${coverPhoto ? "has-thumb" : ""}`}
+      className={`exp-item ${coverPhoto ? "has-thumb" : ""} ${className}`}
+      style={style}
       tabIndex={0}
       role="button"
       aria-haspopup="dialog"
@@ -58,11 +68,25 @@ export function ExperienceCard({ experience, onSelect, lang = "pt" }: Experience
           <p className="exp-desc">{experience.summary}</p>
 
           <div className="exp-tags">
-            {experience.tech.slice(0, 5).map((t) => (
-              <span key={t} className="tech-pill">
-                {t}
-              </span>
-            ))}
+            {experience.tech.slice(0, 5).map((t) => {
+              const iconUrl = getTechIconUrl(t);
+              const slug = getTechSlug(t);
+              return (
+                <span key={t} className="tech-pill" data-tech={slug}>
+                  {iconUrl && (
+                    <img
+                      src={iconUrl}
+                      alt=""
+                      aria-hidden="true"
+                      className="tech-pill-icon"
+                      data-tech={slug}
+                      loading="lazy"
+                    />
+                  )}
+                  <span>{t}</span>
+                </span>
+              );
+            })}
             {experience.tech.length > 5 && (
               <span className="tech-pill more">+{experience.tech.length - 5}</span>
             )}

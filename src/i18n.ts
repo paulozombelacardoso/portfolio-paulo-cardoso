@@ -128,7 +128,7 @@ export const translations: Record<Lang, Translations> = {
       lead:
         "A minha formação conjuga a disciplina e organização da Informática de Gestão no IMEL com a exigência técnica, autonomia e resolução contínua de problemas da 42 Luanda.",
       text:
-        "Foco-me no desenvolvimento backend estruturado com NestJS, TypeScript e PostgreSQL, infraestrutura e conteinerização com Docker, e sistemas Unix/Linux de baixo nível em C e C++. Integro também modelos de Inteligência Artificial (APIs Gemini e Anthropic) para enriquecer aplicações reais com pesquisa semântica e processamento de linguagem natural.",
+        "",
       meta1Title: "Backend & APIs",
       meta1Desc: "Arquitecturas modulares, autenticação JWT/OAuth2 e Clean Architecture.",
       meta2Title: "DevOps & Linux",
@@ -240,7 +240,7 @@ export const translations: Record<Lang, Translations> = {
       lead:
         "My background combines the discipline and organization of Management Informatics at IMEL with the technical rigor, autonomy, and continuous problem-solving of 42 Luanda.",
       text:
-        "I focus on structured backend development with NestJS, TypeScript, and PostgreSQL, infrastructure and containerization with Docker, and low-level Unix/Linux systems in C and C++. I also integrate Artificial Intelligence models (Gemini and Anthropic APIs) to enhance real-world applications with semantic search and natural language processing.",
+        "",
       meta1Title: "Backend & APIs",
       meta1Desc: "Modular architectures, JWT/OAuth2 authentication, and Clean Architecture.",
       meta2Title: "DevOps & Linux",
