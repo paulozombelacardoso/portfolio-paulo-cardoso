@@ -681,18 +681,26 @@ nav a.act {
 .reveal-card {
   opacity: 0;
   transform: translateY(28px);
-  transition:
-    opacity 0.65s cubic-bezier(0.16, 1, 0.3, 1),
-    transform 0.65s cubic-bezier(0.16, 1, 0.3, 1),
-    border-color 0.25s ease,
-    box-shadow 0.25s ease;
-  transition-delay: var(--reveal-delay, 0ms), var(--reveal-delay, 0ms), 0ms, 0ms;
   will-change: transform, opacity;
+}
+
+.reveal-card:not(.reveal-complete) {
+  transition:
+    opacity 0.65s cubic-bezier(0.16, 1, 0.3, 1) var(--reveal-delay, 0ms),
+    transform 0.65s cubic-bezier(0.16, 1, 0.3, 1) var(--reveal-delay, 0ms) !important;
 }
 
 .reveal-card.is-visible {
   opacity: 1;
   transform: translateY(0);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .reveal-card {
+    opacity: 1 !important;
+    transform: none !important;
+    transition: none !important;
+  }
 }
 
 .stack-grid {
@@ -710,6 +718,7 @@ nav a.act {
   flex-direction: column;
   gap: 16px;
   position: relative;
+  cursor: pointer;
   transition:
     transform 0.25s cubic-bezier(0.16, 1, 0.3, 1),
     border-color 0.25s ease,
@@ -722,6 +731,14 @@ nav a.act {
   transform: translateY(-6px);
   border-color: var(--ac);
   box-shadow: 0 14px 30px var(--ac-glow), 0 0 0 1px var(--ac);
+  transition-delay: 0ms !important;
+  transition-duration: 0.22s !important;
+}
+
+.stack-card:hover .stack-icon-wrap {
+  transform: scale(1.08);
+  background-color: var(--ac-subtle);
+  color: var(--ac);
 }
 
 .stack-head {
@@ -739,6 +756,10 @@ nav a.act {
   display: grid;
   place-items: center;
   flex-shrink: 0;
+  transition:
+    transform 0.22s ease,
+    background-color 0.22s ease,
+    color 0.22s ease;
 }
 
 .stack-category-name {
@@ -823,6 +844,8 @@ nav a.act {
   border-color: var(--ac);
   transform: translateY(-6px);
   box-shadow: 0 16px 36px var(--ac-glow), 0 0 0 1px var(--ac);
+  transition-delay: 0ms !important;
+  transition-duration: 0.22s !important;
 }
 
 .project-thumb-wrap {
@@ -1040,6 +1063,8 @@ nav a.act {
   border-color: var(--ac);
   transform: translateY(-5px);
   box-shadow: 0 14px 32px var(--ac-glow), 0 0 0 1px var(--ac);
+  transition-delay: 0ms !important;
+  transition-duration: 0.22s !important;
 }
 
 .exp-content-grid {
@@ -1230,6 +1255,28 @@ nav a.act {
   border: 1px solid var(--border);
   border-radius: 8px;
   padding: 22px;
+  cursor: pointer;
+  position: relative;
+  transition:
+    transform 0.25s cubic-bezier(0.16, 1, 0.3, 1),
+    border-color 0.25s ease,
+    box-shadow 0.25s ease,
+    background-color 0.25s ease;
+}
+
+.edu-card:hover,
+.reveal-card.is-visible.edu-card:hover {
+  transform: translateY(-5px);
+  border-color: var(--ac);
+  box-shadow: 0 14px 32px var(--ac-glow), 0 0 0 1px var(--ac);
+  transition-delay: 0ms !important;
+  transition-duration: 0.22s !important;
+}
+
+.edu-card:hover .edu-icon-wrap {
+  transform: scale(1.08);
+  background-color: var(--ac-subtle);
+  color: var(--ac);
 }
 
 .edu-card-top {
@@ -1248,6 +1295,10 @@ nav a.act {
   display: grid;
   place-items: center;
   flex-shrink: 0;
+  transition:
+    transform 0.22s ease,
+    background-color 0.22s ease,
+    color 0.22s ease;
 }
 
 .edu-period {
@@ -1311,12 +1362,21 @@ nav a.act {
   align-items: center;
   justify-content: space-between;
   gap: 14px;
-  transition: border-color 0.15s ease, transform 0.15s ease;
+  position: relative;
+  transition:
+    transform 0.25s cubic-bezier(0.16, 1, 0.3, 1),
+    border-color 0.25s ease,
+    box-shadow 0.25s ease,
+    background-color 0.25s ease;
 }
 
-.cert-card:hover {
+.cert-card:hover,
+.reveal-card.is-visible.cert-card:hover {
   border-color: var(--ac);
-  transform: translateY(-1px);
+  transform: translateY(-4px);
+  box-shadow: 0 12px 28px var(--ac-glow), 0 0 0 1px var(--ac);
+  transition-delay: 0ms !important;
+  transition-duration: 0.22s !important;
 }
 
 .cert-card-main {

@@ -28,7 +28,7 @@ export function SkillGroupCard({ category, className = "", style }: SkillGroupCa
   };
 
   return (
-    <div className={`stack-card ${className}`} style={style}>
+    <div className={`stack-card ${className}`} style={style} tabIndex={0}>
       <div className="stack-head">
         <div className="stack-icon-wrap">{getIcon(category.iconName)}</div>
         <div>

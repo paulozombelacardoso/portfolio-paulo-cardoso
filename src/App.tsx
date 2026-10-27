@@ -449,7 +449,7 @@ export default function App() {
 
         {/* 5. Stack Tecnológica */}
         <section id="stack" className="section">
-          <div className="section-head">
+          <div className="section-head reveal-card">
             <span className="section-kicker">{t.stack.kicker}</span>
             <h2 className="section-title">{t.stack.title}</h2>
             <p className="section-desc">{t.stack.desc}</p>
@@ -469,7 +469,7 @@ export default function App() {
 
         {/* 6. Projectos Técnicos */}
         <section id="projects" className="section">
-          <div className="section-head">
+          <div className="section-head reveal-card">
             <span className="section-kicker">{t.projects.kicker}</span>
             <h2 className="section-title">{t.projects.title}</h2>
             <p className="section-desc">{t.projects.desc}</p>
@@ -492,7 +492,7 @@ export default function App() {
 
         {/* 7. Experiência Profissional */}
         <section id="experience" className="section">
-          <div className="section-head">
+          <div className="section-head reveal-card">
             <span className="section-kicker">{t.experience.kicker}</span>
             <h2 className="section-title">{t.experience.title}</h2>
             <p className="section-desc">{t.experience.desc}</p>
@@ -514,7 +514,7 @@ export default function App() {
 
         {/* 8. Formação & Certificações */}
         <section id="education" className="section">
-          <div className="section-head">
+          <div className="section-head reveal-card">
             <span className="section-kicker">{t.education.kicker}</span>
             <h2 className="section-title">{t.education.title}</h2>
           </div>
@@ -524,6 +524,7 @@ export default function App() {
               <div
                 key={edu.school}
                 className="edu-card reveal-card"
+                tabIndex={0}
                 style={{ "--reveal-delay": `${(idx % 3) * 90}ms` } as React.CSSProperties}
               >
                 <div className="edu-card-top">
@@ -547,7 +548,7 @@ export default function App() {
           </div>
 
           <div className="certs-section">
-            <h3 className="certs-heading">
+            <h3 className="certs-heading reveal-card">
               <Award size={18} /> {t.education.certsHeading}
             </h3>
             <div className="certs-grid">
