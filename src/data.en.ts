@@ -130,6 +130,7 @@ export const projectsEn: Project[] = [
     category: "Full Stack & IA",
     summary:
       "Full-stack application utilizing Artificial Intelligence and semantic search to locate pharmaceutical products from natural language symptom descriptions.",
+    coverImage: "pharma_IA/AI-Powered Semantic Health Search.png",
     problem:
       "Difficulty in quickly locating appropriate pharmaceutical products based on user natural language while providing clear information without replacing medical advice.",
     architecture:
@@ -175,6 +176,7 @@ export const projectsEn: Project[] = [
     category: "Sistemas & C/C++",
     summary:
       "Real-time chat server built to RFC 1459/2812 IRC specifications, featuring non-blocking I/O multiplexing via poll() syscall.",
+    coverImage: "ft_irc/Diagrama de Arquitetura IRC em C++.png",
     problem:
       "Handle dozens of clients simultaneously across network sockets asynchronously, ensuring the server never blocks waiting for user data.",
     architecture:

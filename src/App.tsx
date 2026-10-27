@@ -783,7 +783,14 @@ export default function App() {
               <img
                 src={activeProject.coverImage}
                 alt={`Imagem do projecto ${activeProject.name}`}
-                className="modal-cover-img"
+                className="modal-cover-img modal-cover-clickable"
+                onClick={() =>
+                  setEnlargedPhoto({
+                    src: activeProject.coverImage!,
+                    title: activeProject.name
+                  })
+                }
+                title={lang === "en" ? "Click to enlarge" : "Clique para ampliar"}
               />
             </div>
           )}
@@ -796,7 +803,14 @@ export default function App() {
                   key={idx}
                   src={imgSrc}
                   alt={`Fotografia ${idx + 1} de ${activeProject.name}`}
-                  className="modal-gallery-thumb"
+                  className="modal-gallery-thumb modal-cover-clickable"
+                  onClick={() =>
+                    setEnlargedPhoto({
+                      src: imgSrc,
+                      title: `${activeProject.name} — ${lang === "en" ? "Photo" : "Fotografia"} ${idx + 1}`
+                    })
+                  }
+                  title={lang === "en" ? "Click to enlarge" : "Clique para ampliar"}
                 />
               ))}
             </div>
