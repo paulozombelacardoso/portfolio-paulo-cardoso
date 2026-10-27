@@ -34,7 +34,7 @@ export const profile: Profile = {
   lead: "Construo soluções de software, APIs e sistemas com foco em arquitectura, desempenho e resolução de problemas.",
   rotatingLeads: [
     "Construo soluções de software, APIs e sistemas com foco em arquitectura, desempenho e resolução de problemas.",
-    "Construo sistemas. Resolvo problemas. Optimizo soluções.",
+    "Desenvolvo sistemas. Resolvo problemas. Otimizo soluções.",
     "Transformo desafios técnicos em soluções escaláveis."
   ],
   shortBio:
