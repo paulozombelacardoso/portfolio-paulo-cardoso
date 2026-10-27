@@ -318,10 +318,6 @@ export default function App() {
         <section id="home" className="hero-section">
           <div className="hero-grid">
             <div className="hero-content">
-              <div className="hero-badge">
-                <span className="badge-pulse" /> {t.hero.badge}
-              </div>
-
               <h1 className="hero-name">{currentProfile.name}</h1>
               <h2 className="hero-title">{currentProfile.title}</h2>
 
