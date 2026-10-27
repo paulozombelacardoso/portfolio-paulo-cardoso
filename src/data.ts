@@ -205,6 +205,7 @@ export const projects: Project[] = [
     category: "Sistemas & C/C++",
     summary:
       "Implementação em C de uma shell Unix com suporte à execução de binários, pipelines encadeados, redireccionamentos de I/O e gestão de sinais POSIX.",
+    videoUrl: "Minishell/MINISHELL.mp4",
     problem:
       "Compreender detalhadamente o funcionamento interno de um interpretador de comandos POSIX: ciclo de vida de processos, gestão de sinais e parsing sintáctico sem bibliotecas de alto nível.",
     architecture:

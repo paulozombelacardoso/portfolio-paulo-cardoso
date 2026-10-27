@@ -152,6 +152,7 @@ export const projectsEn: Project[] = [
     category: "Sistemas & C/C++",
     summary:
       "C implementation of a Unix shell supporting binary execution, chained pipelines, I/O redirections, and POSIX signal handling.",
+    videoUrl: "Minishell/MINISHELL.mp4",
     problem:
       "Deeply understand the internal operation of a POSIX command interpreter: process lifecycles, signal management, and syntactic parsing without high-level libraries.",
     architecture:
