@@ -1,30 +1,26 @@
-.DEFAULT_GOAL := help
-PORT ?= 5173
+.PHONY: all dev build preview lint test seed db
 
-help: ## Mostra os comandos disponíveis
-	@grep -E '^[a-zA-Z_-]+:.*## ' $(MAKEFILE_LIST) | awk -F':.*## ' '{printf "  make %-10s %s\n", $$1, $$2}'
+all: build
 
-node_modules: package.json
-	npm install
-	@touch node_modules
+dev:
+	@npm run dev
 
-install: node_modules ## Instala as dependências
+build:
+	@npm run build
 
-dev: node_modules ## Servidor de desenvolvimento (PORT=5173)
-	npm run dev -- --host --port $(PORT)
+preview:
+	@npm run preview
 
-build: node_modules ## Gera a versão de produção em dist/
-	npm run build
+lint:
+	@npm run lint
 
-preview: build ## Serve a build de produção localmente
-	npm run preview -- --host --port $(PORT)
+test:
+	@npm run test
 
-check: ## Verifica se os PDFs dos CVs existem
-	@for f in Paulo_Cardoso_CV_FullStack_PT CV_Paulo_Cardoso_IT Paulo_Cardoso_CV; do \
-		[ -f public/cv/$$f.pdf ] && echo "OK      public/cv/$$f.pdf" || echo "FALTA   public/cv/$$f.pdf"; \
-	done
+seed:
+	@npm run seed
 
-clean: ## Remove dist/ e node_modules/
-	rm -rf dist node_modules
+db:
+	@npx tsx server/db.ts
 
-.PHONY: help install dev build preview check clean
+migrate: db
