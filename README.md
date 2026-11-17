@@ -41,14 +41,17 @@ make up            # docker compose up -d postgres
 make seed          # cria tabelas, utilizador admin e conteúdo de demonstração
 ```
 
-## ▶️ Pôr o painel admin no ar
-
-São dois processos, cada um no seu terminal:
+## ▶️ Pôr tudo no ar (um só comando)
 
 ```bash
-make api   # Backend / API admin em http://localhost:4000 (reload automático)
-make dev   # Frontend Vite em http://localhost:5174 (encaminha /api para a porta 4000)
+make dev   # PostgreSQL (5434) + API/admin (4000) + frontend Vite (5174)
 ```
+
+O comando inicia o PostgreSQL via docker compose, espera que fique pronto e arranca a API e o frontend
+no mesmo terminal (linhas prefixadas com `[api]` e `[web]`). **Ctrl+C pára tudo**; se um dos processos
+terminar, o outro também é parado. Equivalente: `npm run dev:all`.
+
+Comandos individuais, se precisar: `make up` (só a base de dados), `make api` (só a API), `make front` (só o Vite).
 
 | URL | O quê |
 |-----|-------|

@@ -1,4 +1,4 @@
-.PHONY: all dev api start build preview lint test seed db migrate up down typecheck
+.PHONY: all dev front api start build preview lint test seed db migrate up down typecheck
 
 all: build
 
@@ -9,8 +9,12 @@ up:
 down:
 	@docker compose down
 
-# Frontend (Vite, porta 5174) — encaminha /api para o backend
+# Tudo de uma vez: PostgreSQL + API/admin (4000) + frontend (5174). Ctrl+C pára tudo.
 dev:
+	@npm run dev:all
+
+# Só o frontend (Vite, porta 5174) — encaminha /api para o backend
+front:
 	@npm run dev
 
 # Backend / painel admin (porta 4000) com reload automático

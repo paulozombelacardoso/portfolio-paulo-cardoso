@@ -13,7 +13,8 @@
     "lint": "eslint 'server/**' 'src/**' --ext .ts,.tsx,.js,.jsx",
     "dev:api": "tsx watch server/index.ts",
     "start": "tsx server/index.ts",
-    "migrate": "tsx server/migrate.ts"
+    "migrate": "tsx server/migrate.ts",
+    "dev:all": "exec bash scripts/dev.sh"
   },
   "dependencies": {
     "bcryptjs": "^3.0.3",

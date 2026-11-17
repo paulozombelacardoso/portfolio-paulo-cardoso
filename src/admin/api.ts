@@ -66,6 +66,15 @@ async function request<T>(method: string, path: string, body?: unknown): Promise
     }
   }
 
+  if (!response.ok && !data && response.status >= 500) {
+    // Resposta sem JSON = não veio da API (ex.: proxy do Vite sem backend na porta 4000).
+    throw new ApiRequestError(
+      response.status,
+      "A API não está acessível. Verifique se o servidor backend está a correr (make api).",
+      "API_UNREACHABLE"
+    );
+  }
+
   if (!response.ok) {
     if (response.status === 401 && !path.startsWith("/admin/auth/login")) {
       unauthorizedListeners.forEach((listener) => listener());

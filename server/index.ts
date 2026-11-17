@@ -34,6 +34,18 @@ async function main() {
   process.on("SIGTERM", () => shutdown("SIGTERM"));
 }
 
+// Regista sempre a causa antes de o processo terminar (facilita diagnosticar quedas da API).
+process.on("unhandledRejection", (reason) => {
+  logger.error("Promise rejeitada sem tratamento.", { error: reason });
+});
+process.on("uncaughtException", (error) => {
+  logger.error("Excepção não tratada; a terminar.", { error });
+  process.exit(1);
+});
+process.on("exit", (code) => {
+  if (code !== 0) console.error(`[api] processo terminou com código ${code}`);
+});
+
 main().catch((error) => {
   logger.error("Falha ao arrancar o servidor.", { error });
   process.exit(1);
