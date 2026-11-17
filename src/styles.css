@@ -19,6 +19,17 @@
   --border: #222b3a;
   --border-hover: #354257;
   --font: "JetBrains Mono", ui-monospace, Menlo, Consolas, monospace;
+
+  /* Largura útil do conteúdo e margens laterais (iguais à esquerda e à direita).
+     O gutter fica fora do max-width, para ecrãs grandes não estreitarem o conteúdo. */
+  --page-max: 1200px;
+  --gutter: max(80px, 6vw);
+}
+
+@media (max-width: 860px) {
+  :root {
+    --gutter: 20px;
+  }
 }
 
 :root[data-theme="light"] {
@@ -42,6 +53,7 @@
 }
 
 html {
+  overflow-x: clip;
   scroll-behavior: smooth;
   scroll-padding-top: 84px;
 }
@@ -271,8 +283,8 @@ nav a.act {
 
 /* 3. Typography & Section Structure */
 .section {
-  padding: 88px max(24px, 8vw);
-  max-width: 1140px;
+  padding: 88px var(--gutter);
+  max-width: calc(var(--page-max) + 2 * var(--gutter));
   margin: 0 auto;
 }
 
@@ -308,8 +320,8 @@ nav a.act {
 
 /* 4. Hero Section */
 .hero-section {
-  padding: 130px max(24px, 8vw) 80px;
-  max-width: 1140px;
+  padding: 130px var(--gutter) 80px;
+  max-width: calc(var(--page-max) + 2 * var(--gutter));
   margin: 0 auto;
 }
 
@@ -526,7 +538,48 @@ nav a.act {
 
 /* 5. About Section */
 .about-wrap {
-  max-width: 820px;
+  width: 100%;
+}
+
+/* Texto com largura de leitura confortável; os cartões ocupam a largura toda da secção. */
+.about-text-lead,
+.about-text {
+  max-width: 860px;
+}
+
+/* Cartões "Sobre": fixos quando cabem lado a lado, carrossel só em ecrãs estreitos. */
+.about-cards {
+  display: grid;
+  grid-template-columns: repeat(var(--about-cols, 3), minmax(0, 1fr));
+  gap: 16px;
+  margin-top: 8px;
+}
+
+.about-cards .meta-card {
+  display: flex;
+  flex-direction: column;
+  transition: transform 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease, background-color 0.2s ease;
+}
+
+.about-cards .meta-card:hover {
+  transform: translateY(-3px);
+  border-color: var(--ac);
+  box-shadow: 0 4px 18px var(--ac-glow);
+  background-color: var(--bg3);
+}
+
+.about-carousel-wrapper.is-narrow-only {
+  display: none;
+}
+
+@media (max-width: 899px) {
+  .about-cards {
+    display: none;
+  }
+
+  .about-carousel-wrapper.is-narrow-only {
+    display: block;
+  }
 }
 
 .about-text-lead {
@@ -1652,7 +1705,7 @@ nav a.act {
 }
 
 .footer-wrap {
-  max-width: 1140px;
+  max-width: var(--page-max);
   margin: 0 auto;
   display: flex;
   justify-content: space-between;
@@ -1664,6 +1717,7 @@ nav a.act {
 .footer-left {
   display: flex;
   flex-direction: column;
+  max-width: 100%;
   gap: 2px;
   font-size: 12px;
   color: var(--mut);
@@ -1676,6 +1730,8 @@ nav a.act {
 .footer-links {
   display: flex;
   align-items: center;
+  flex-wrap: wrap;
+  max-width: 100%;
   gap: 10px;
   font-size: 12px;
   color: var(--mut);
@@ -2177,4 +2233,42 @@ nav a.act {
   margin: 0;
   max-width: 520px;
   color: var(--mut);
+}
+
+/* Telemóveis: o header tem de caber sem scroll horizontal */
+.logo-name {
+  white-space: nowrap;
+}
+
+@media (max-width: 480px) {
+  .top {
+    padding: 0 14px;
+  }
+
+  .logo {
+    gap: 8px;
+    min-width: 0;
+  }
+
+  .logo-name {
+    font-size: 12.5px;
+  }
+
+  .tools {
+    gap: 6px;
+  }
+
+  .nav-cv-btn {
+    padding: 5px 10px;
+  }
+
+  .footer {
+    padding: 24px 20px;
+  }
+}
+
+@media (max-width: 374px) {
+  .logo-name {
+    display: none;
+  }
 }

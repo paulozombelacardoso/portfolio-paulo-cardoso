@@ -10,53 +10,51 @@ interface AboutCardsCarouselProps {
   cards: AboutCardItem[];
 }
 
-export function AboutCardsCarousel({ cards }: AboutCardsCarouselProps) {
-  // Renderiza cópias suficientes para garantir fluxo contínuo sem espaços vazios
-  const renderCardSet = (keyPrefix: string) => (
-    <>
-      {cards.map((card, idx) => (
-        <div key={`${keyPrefix}-set1-${idx}`} className="meta-card">
-          <span className="meta-number">{card.num}</span>
-          <h4>{card.title}</h4>
-          <p>{card.desc}</p>
-        </div>
-      ))}
-      {cards.map((card, idx) => (
-        <div key={`${keyPrefix}-set2-${idx}`} className="meta-card">
-          <span className="meta-number">{card.num}</span>
-          <h4>{card.title}</h4>
-          <p>{card.desc}</p>
-        </div>
-      ))}
-      {cards.map((card, idx) => (
-        <div key={`${keyPrefix}-set3-${idx}`} className="meta-card">
-          <span className="meta-number">{card.num}</span>
-          <h4>{card.title}</h4>
-          <p>{card.desc}</p>
-        </div>
-      ))}
-    </>
+function Card({ card }: { card: AboutCardItem }) {
+  return (
+    <div className="meta-card">
+      <span className="meta-number">{card.num}</span>
+      <h4>{card.title}</h4>
+      <p>{card.desc}</p>
+    </div>
   );
+}
+
+/**
+ * Ecrãs largos: cartões fixos lado a lado (alinhados com as restantes secções).
+ * Ecrãs estreitos (< 900px): carrossel contínuo. A troca é feita em CSS.
+ */
+export function AboutCardsCarousel({ cards }: AboutCardsCarouselProps) {
+  // Cópias suficientes para o carrossel fluir sem espaços vazios.
+  const renderCardSet = (keyPrefix: string) =>
+    [0, 1, 2].flatMap((set) => cards.map((card, idx) => <Card key={`${keyPrefix}-${set}-${idx}`} card={card} />));
 
   return (
-    <div
-      className="about-carousel-wrapper"
-      role="region"
-      aria-label="Áreas de especialização"
-    >
-      <div className="about-carousel-container">
-        <div className="about-carousel-track">
-          {/* Grupo principal acessível */}
-          <div className="about-carousel-group">
-            {renderCardSet("main")}
+    <>
+      <div
+        className="about-cards"
+        role="list"
+        aria-label="Áreas de especialização"
+        style={{ "--about-cols": Math.min(cards.length, 3) } as React.CSSProperties}
+      >
+        {cards.map((card, idx) => (
+          <div role="listitem" key={idx} style={{ display: "contents" }}>
+            <Card card={card} />
           </div>
+        ))}
+      </div>
 
-          {/* Grupo duplicado para loop contínuo infinito e sem saltos */}
-          <div className="about-carousel-group" aria-hidden="true">
-            {renderCardSet("dup")}
+      <div className="about-carousel-wrapper is-narrow-only" role="region" aria-label="Áreas de especialização">
+        <div className="about-carousel-container">
+          <div className="about-carousel-track">
+            <div className="about-carousel-group">{renderCardSet("main")}</div>
+            {/* Grupo duplicado para loop contínuo sem saltos */}
+            <div className="about-carousel-group" aria-hidden="true">
+              {renderCardSet("dup")}
+            </div>
           </div>
         </div>
       </div>
-    </div>
+    </>
   );
 }
