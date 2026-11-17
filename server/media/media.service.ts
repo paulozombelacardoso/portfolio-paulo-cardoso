@@ -83,7 +83,14 @@ export function serializeMedia(row: MediaRow) {
 
 function translateStorageError(error: unknown): never {
   if (error instanceof StorageError) {
-    const status = error.code === "STORAGE_AUTH" ? 503 : error.code === "STORAGE_TIMEOUT" ? 504 : 502;
+    const status =
+      error.code === "STORAGE_INVALID_FILE"
+        ? 422
+        : error.code === "STORAGE_AUTH"
+          ? 503
+          : error.code === "STORAGE_TIMEOUT"
+            ? 504
+            : 502;
     throw new ApiError(status, error.message, error.code);
   }
   throw error;
@@ -172,7 +179,7 @@ export class MediaService {
     });
   }
 
-  async upload(input: ValidatedFile, folder: MediaFolder) {
+  async upload(input: ValidatedFile, folder: MediaFolder, altText: string, actor: Actor) {
     let asset: StoredAsset;
     try {
       asset = await this.storage.upload({ ...input, folder });
@@ -186,7 +193,8 @@ export class MediaService {
         `INSERT INTO media
          (id, public_id, secure_url, resource_type, format, bytes, width, height, duration, folder,
           original_name, mime_type, kind, alt_text, transformations, created_at, updated_at)
-         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $16)`,
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $16)
+         RETURNING *`,
         [
           id,
           asset!.publicId,
@@ -201,7 +209,7 @@ export class MediaService {
           input.originalName,
           input.mimeType,
           input.kind,
-          altText!.slice(0, 300),
+          altText.slice(0, 300),
           JSON.stringify(asset!.transformations),
           now()
         ]
@@ -210,7 +218,7 @@ export class MediaService {
       await execute(
         `INSERT INTO activity_log (id, user_id, user_name, action, resource_type, resource_id, title, created_at)
          VALUES ($1, $2, $3, 'upload', 'media', $4, $5, $6)`,
-        [randomUUID(), actorId || null, actorName || "", id, input.originalName, now()]
+        [randomUUID(), actor.id || null, actor.name || "", id, input.originalName, now()]
       );
 
       logger.info("Upload concluído.", {
@@ -248,9 +256,9 @@ export class MediaService {
         await client.query(
           `UPDATE media SET
              public_id = $1, secure_url = $2, resource_type = $3, format = $4, bytes = $5,
-             width = $7, height = $8, duration = $9, folder = $10, original_name = $11,
-             mime_type = $12, kind = $13, alt_text = $14, transformations = $15, updated_at = $16
-           WHERE id = $17`,
+             width = $6, height = $7, duration = $8, folder = $9, original_name = $10,
+             mime_type = $11, kind = $12, alt_text = $13, transformations = $14, updated_at = $15
+           WHERE id = $16`,
           [
             asset!.publicId,
             asset!.secureUrl,
@@ -264,7 +272,8 @@ export class MediaService {
             input.originalName,
             input.mimeType,
             input.kind,
-            altText!.slice(0, 300),
+            altText.slice(0, 300),
+            JSON.stringify(asset!.transformations),
             now(),
             id
           ]

@@ -19,7 +19,7 @@ function serializeSettings(row: any) {
 settingsRouter.get(
   "/",
   asyncHandler(async (_req, res) => {
-    res.json(serializeSettings(getSettingsRow()));
+    res.json(serializeSettings(await getSettingsRow()));
   })
 );
 
@@ -50,19 +50,19 @@ settingsRouter.put(
         .map((section, index) => ({ ...section, order: (index + 1) * 10 }))
     };
 
-    if (getSettingsRow()) {
-      db.prepare("UPDATE settings SET data = ?, updated_at = ? WHERE id = 1").run(
+    if (await getSettingsRow()) {
+      await db.prepare("UPDATE settings SET data = ?, updated_at = ? WHERE id = 1").run(
         JSON.stringify(normalized),
         now()
       );
     } else {
-      db.prepare("INSERT INTO settings (id, data, updated_at) VALUES (1, ?, ?)").run(
+      await db.prepare("INSERT INTO settings (id, data, updated_at) VALUES (1, ?, ?)").run(
         JSON.stringify(normalized),
         now()
       );
     }
 
-    logActivity({
+    await logActivity({
       userId: req.adminUser?.id,
       userName: req.adminUser?.name,
       action: "update",
@@ -70,6 +70,6 @@ settingsRouter.put(
       resourceId: "settings",
       title: "Configurações do portfólio"
     });
-    res.json(serializeSettings(getSettingsRow()));
+    res.json(serializeSettings(await getSettingsRow()));
   })
 );

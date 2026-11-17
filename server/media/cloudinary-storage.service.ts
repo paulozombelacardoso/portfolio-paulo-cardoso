@@ -49,6 +49,13 @@ function mapCloudinaryError(error: unknown, operation: "upload" | "delete" | "me
       false
     );
   }
+  if (status === 400 && operation === "upload") {
+    return new StorageError(
+      "STORAGE_INVALID_FILE",
+      "O ficheiro foi recusado pelo armazenamento (conteúdo inválido ou corrompido).",
+      false
+    );
+  }
   if (status === 404) {
     return new StorageError("STORAGE_NOT_FOUND", "O recurso não existe no armazenamento.", false);
   }
@@ -195,7 +202,7 @@ export class CloudinaryStorageService implements MediaStorageService {
     }
   }
 
-  generateTransformations(publicId: string, resourceType: string, format: string) {
+  generateTransformations(publicId: string, resourceType: string, format: string): Record<string, string> {
     const base = { secure: true, resource_type: resourceType || "image" } as any;
     if (resourceType === "video") {
       return {

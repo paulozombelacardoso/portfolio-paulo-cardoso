@@ -53,10 +53,12 @@ const arrayOfText = (max: number, itemMax = 240) =>
   z.array(text(itemMax).min(1)).max(max).default([]);
 
 const localizedTextList = (max: number, itemMax = 240) =>
-  z.object({
-    pt: arrayOfText(max, itemMax),
-    en: arrayOfText(max, itemMax).optional()
-  });
+  z
+    .object({
+      pt: arrayOfText(max, itemMax),
+      en: arrayOfText(max, itemMax).optional()
+    })
+    .default({ pt: [] });
 
 export const projectLocalized = z.object({
   name: requiredText("Nome do projecto", 160, 2),

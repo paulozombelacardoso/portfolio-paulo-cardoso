@@ -27,82 +27,103 @@ Painel administrativo integrado com o portfólio de Paulo Cardoso, utilizando **
 ## 📦 Instalação
 
 ```bash
-# 1. Clonar e instalar dependências
-git clone <repo>
-cd portfolio-paulo-cardoso
+# 1. Instalar dependências
 npm install
 
 # 2. Configurar variáveis de ambiente
 cp .env.example .env
-# Edite .env com seus valores (ver abaixo)
+# Edite .env (ADMIN_EMAIL, ADMIN_PASSWORD, CLOUDINARY_*)
 
-# 3. Iniciar PostgreSQL
-docker compose up -d postgres
-# Aguardar health check
+# 3. Iniciar o PostgreSQL deste projecto (porta 5434)
+make up            # docker compose up -d postgres
 
-# 4. Executar migrações e seed
-make db    # ou: npx tsx server/db.ts
-make seed  # ou: npx tsx server/db/seed.ts
-
-# 5. Iniciar servidores
-make dev   # Vite (frontend) na porta 5174
-# Em outro terminal:
-make build && npm run preview  # ou apenas o backend
+# 4. Migrações + dados iniciais (idempotente)
+make seed          # cria tabelas, utilizador admin e conteúdo de demonstração
 ```
+
+## ▶️ Pôr o painel admin no ar
+
+São dois processos, cada um no seu terminal:
+
+```bash
+make api   # Backend / API admin em http://localhost:4000 (reload automático)
+make dev   # Frontend Vite em http://localhost:5174 (encaminha /api para a porta 4000)
+```
+
+| URL | O quê |
+|-----|-------|
+| `http://localhost:4000/api/health` | Health check |
+| `http://localhost:4000/api/docs` | Swagger UI (testar o admin no browser) |
+| `http://localhost:4000/api/admin/*` | API do painel admin |
+| `http://localhost:4000/api/public/portfolio` | API pública |
+| `http://localhost:5174` | Portfólio (frontend) |
+
+O arranque do backend (`server/index.ts`) espera pela base de dados, aplica migrações e faz o seed automaticamente.
+
+### 🖥️ Painel admin (interface)
+
+Abra **http://localhost:5174/admin** (desenvolvimento) ou **http://localhost:4000/admin** (build servido pelo backend)
+e inicie sessão com `ADMIN_EMAIL` / `ADMIN_PASSWORD`.
+
+| Página | O que permite |
+|--------|---------------|
+| Dashboard | Totais por secção, publicados vs. rascunhos, últimas actualizações, estado do site |
+| Perfil | Nome, título, frases, bio (PT/EN), fotografia, contactos e redes |
+| CV | Upload de PDF, definir o CV activo (usado pelo botão "Download CV") |
+| Projectos, Experiências, Certificações, Formação, Cursos, Publicações, Competências, Categorias | Listagem com pesquisa, filtros e paginação; criar/editar num painel lateral (PT/EN); publicar/despublicar; reordenar; eliminar com confirmação |
+| Media | Biblioteca Cloudinary: upload com pré-visualização, texto alternativo, substituir (actualiza todas as referências), eliminar (bloqueado se estiver em uso) |
+| Configurações | Site publicado / manutenção, secções visíveis e ordem, contactos, SEO e Open Graph |
+| Conta | Alterar a palavra-passe |
+
+O portfólio público (`/`) lê o conteúdo de `GET /api/public/portfolio` — só conteúdo **publicado**. Se a API
+não estiver disponível (ex.: deploy estático), usa o conteúdo embutido em `src/data.ts` como alternativa.
+
+Código: `src/admin/` (carregado num bundle separado, só em `/admin`) e `src/usePortfolio.ts`.
 
 ## 🔐 Acesso ao Painel Admin
 
-### Credenciais Padrão
+### Credenciais
 
-As credenciais são lidas do ficheiro `.env`:
+O utilizador admin é criado no primeiro seed a partir de `ADMIN_EMAIL` e `ADMIN_PASSWORD` do ficheiro `.env`
+(nunca escreva a palavra-passe no README nem a coloque no git). Depois de criado, alterar o `.env` **não** muda a
+palavra-passe: use `PUT /api/admin/auth/password`.
 
-```
-ADMIN_EMAIL=paulozombelacardoso@gmail.com
-ADMIN_PASSWORD=AfonsoAfonso12@
-```
+### Header CSRF (obrigatório)
 
-### Login
-
-1. Inicie o backend: `npx tsx server/app.ts` (porta 4000)
-2. Aceda à login: `POST http://localhost:4000/api/admin/auth/login`
-3. Body JSON: `{ "email": "paulozombelacardoso@gmail.com", "password": "AfonsoAfonso12@" }`
-4. Cookie `pc_admin_session` será definido automaticamente pelo navegador
-
-### Acesso Protegido
-
-Depois de logado, todas as rotas `/api/admin/*` exigem o cookie:
-- `GET /api/admin/profile` - Dados do perfil
-- `GET /api/admin/media` - Lista de ficheiros
-- `POST /api/admin/media/upload` - Upload de arquivos
-- `GET/POST /api/admin/projects` - Gestão de projetos
-- Entre outras...
-
-### Header CSRF
-
-Requisições POST/PUT/DELETE devem incluir um dos:
+Todos os pedidos `POST/PUT/PATCH/DELETE` para `/api/admin/*` (incluindo o login) têm de levar:
 
 ```
-X-Requested-With: portfolio-csrf
-```
-OU
-```
-Origin: http://localhost:5174 (deve estar em ALLOWED_ORIGINS)
+X-Requested-With: portfolio-cms
 ```
 
-### Testando com cURL
+Se o pedido tiver header `Origin`, este tem de estar em `ALLOWED_ORIGINS`.
+
+### Testar com cURL
 
 ```bash
-# 1. Fazer login
-curl -X POST http://localhost:4000/api/admin/auth/login \
-  -H "Content-Type: application/json" \
-  -d '{"email":"paulozombelacardoso@gmail.com","password":"AfonsoAfonso12@"}'
+# 1. Login (guarda o cookie pc_admin_session em cookies.txt)
+curl -c cookies.txt -X POST http://localhost:4000/api/admin/auth/login \
+  -H "Content-Type: application/json" -H "X-Requested-With: portfolio-cms" \
+  -d '{"email":"<ADMIN_EMAIL>","password":"<ADMIN_PASSWORD>"}'
 
-# 2. Usar o cookie retornado nas requisições seguintes
-curl -b "pc_admin_session=SESSAO_TOKEN" http://localhost:4000/api/admin/media
+# 2. Pedidos autenticados
+curl -b cookies.txt http://localhost:4000/api/admin/dashboard
+curl -b cookies.txt "http://localhost:4000/api/admin/projects?q=docker&published=true"
 
-# 3. Listar mídias
-curl -b "pc_admin_session=SESSAO_TOKEN" http://localhost:4000/api/admin/media?folder=projects
+# 3. Upload para o Cloudinary
+curl -b cookies.txt -X POST http://localhost:4000/api/admin/media/upload \
+  -H "X-Requested-With: portfolio-cms" \
+  -F file=@foto.png -F folder=projects -F altText="Capa do projecto"
 ```
+
+### Rotas principais
+
+- `GET/PUT /api/admin/profile`, `GET/PUT /api/admin/settings`, `GET /api/admin/dashboard`
+- `GET/POST /api/admin/{projects|experiences|certifications|education|courses|publications|skills|skill-categories}`
+- `GET/PATCH/DELETE /api/admin/<recurso>/:id`, `POST /api/admin/<recurso>/reorder`
+- `GET/POST /api/admin/cv`, `PATCH/DELETE /api/admin/cv/:id`, `POST /api/admin/cv/:id/activate`
+- `GET /api/admin/media`, `POST /api/admin/media/upload`, `POST /api/admin/media/:id/replace`,
+  `GET /api/admin/media/:id/usage`, `PATCH/DELETE /api/admin/media/:id`
 
 ## 🌐 API Pública
 
@@ -173,7 +194,7 @@ Transformações automáticas aplicadas:
 lsof -i :4000
 # Matar o processo e reiniciar
 kill <PID>
-make build && npx tsx server/app.ts
+make api
 ```
 
 **Causa 2: PostgreSQL não conectado**
@@ -183,7 +204,7 @@ docker compose ps
 # Ver logs
 docker compose logs postgres
 # Testar conexão
-pg_isready -h localhost -p 5432 -U admin
+pg_isready -h localhost -p 5434 -U admin
 ```
 
 **Causa 3: Variáveis de ambiente incompletas**
@@ -207,8 +228,8 @@ rm -rf node_modules/package-lock.json && npm install
 - Mínimo de 10 caracteres exigido no Zod validation
 
 **Causa 2: CSRF header faltando**
-- Adicionar `X-Requested-With: portfolio-csrf` header
-- Ou garantir que `ALLOWED_ORIGINS` inclui a origem do frontend
+- Adicionar o header `X-Requested-With: portfolio-cms`
+- Se o pedido tiver `Origin`, garantir que `ALLOWED_ORIGINS` a inclui
 
 **Causa 3: Cookie não definido**
 - Verificar se `COOKIE_SECURE` condiz com o ambiente (false para development, true para production)
@@ -217,7 +238,7 @@ rm -rf node_modules/package-lock.json && npm install
 **Causa 4: PostgreSQL errors no login**
 ```bash
 # Verificar se o pool conecta
-npx tsx -e "import { pool } from './server/db.js'; pool.query('SELECT 1').then(r => console.log('DB OK', r.rows)).catch(e => console.log('DB ERRO', e))"
+docker exec portfolio-cms-postgres pg_isready -U admin
 ```
 
 ### Problema: Upload de ficheiros falha
@@ -240,29 +261,36 @@ npx tsx -e "import { pool } from './server/db.js'; pool.query('SELECT 1').then(r
 - Verificar `config.storage.limits` em `server/config.ts`
 - Valores padrão: image 5MB, video 50MB, document 10MB
 
-## 📦 Deploy
+## 🧪 Testes
 
-### Desenvolvimento Local
 ```bash
-make dev          # Vite dev server (porta 5174)
-# Backend Express roda implicitamente através da config Vite
+make up      # o PostgreSQL tem de estar a correr
+npm test     # Vitest + Supertest (48 testes)
 ```
 
-### Produção
+Os testes usam uma base de dados isolada (`portfolio_cms_test`, recriada a cada execução; configurável com
+`TEST_DATABASE_URL`) e armazenamento em memória — não tocam nos dados reais nem no Cloudinary. Cobrem
+autenticação, protecção de rotas/CSRF, CRUD de todos os recursos, validação, uploads (magic bytes, extensão,
+tamanho, ficheiros em uso, substituição), publicação/despublicação e integração com a API pública.
+
+## 📦 Deploy
+
+### Verificação
 ```bash
-make build        # tsc + vite build
-# Definir NODE_ENV=production no .env
-# Garantir que COOKIE_SECURE=true
-# Garantir CLOUDINARY_* vars estão preenchidas
-# Rodar com um servidor Node.js ou Docker
+make typecheck    # frontend + servidor
+make build        # typecheck + vite build
 ```
 
 ### Docker
 ```bash
-docker compose up --build
-# Services definidos: postgres + api
-# Ports: 5434 (PostgreSQL), 4001 (API)
+docker compose up -d --build
+# postgres → porta 5434 | api → porta 4001 (lê ADMIN_* e CLOUDINARY_* do .env)
 ```
+
+### Produção
+- `NODE_ENV=production`, `COOKIE_SECURE=true` (HTTPS), `MEDIA_DRIVER=cloudinary`
+- `ALLOWED_ORIGINS` com o domínio público
+- O backend serve também o frontend compilado (`dist/`)
 
 ## 📜 Licença
 

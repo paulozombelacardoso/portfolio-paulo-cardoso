@@ -44,7 +44,7 @@ export class MemoryStorageService implements MediaStorageService {
     return this.assets.get(publicId) || null;
   }
 
-  generateTransformations(publicId: string, resourceType: string, format: string) {
+  generateTransformations(publicId: string, resourceType: string, format: string): Record<string, string> {
     const base = `https://res.cloudinary.test/${publicId}`;
     if (resourceType === "video") {
       return {

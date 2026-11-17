@@ -18,38 +18,37 @@ const resources = [
 dashboardRouter.get(
   "/",
   asyncHandler(async (_req, res) => {
-    const stats = resources.map((resource) => {
-      const total = (
-        db.prepare(`SELECT COUNT(*) AS count FROM ${resource.key}`).get() as { count: number }
-      ).count;
-      const published = (
-        db.prepare(`SELECT COUNT(*) AS count FROM ${resource.key} WHERE published = 1`).get() as {
-          count: number;
-        }
-      ).count;
-      return {
+    const stats = [];
+    for (const resource of resources) {
+      const counts = await db
+        .prepare(
+          `SELECT COUNT(*) AS total, COUNT(*) FILTER (WHERE published) AS published FROM ${resource.key}`
+        )
+        .get<{ total: number; published: number }>();
+      const total = counts?.total ?? 0;
+      const published = counts?.published ?? 0;
+      stats.push({
         key: resource.key,
         label: resource.label,
         total,
         published,
         drafts: total - published
-      };
-    });
+      });
+    }
 
-    const mediaCount = (
-      db.prepare("SELECT COUNT(*) AS count FROM media").get() as { count: number }
-    ).count;
+    const mediaCount =
+      (await db.prepare("SELECT COUNT(*) AS count FROM media").get<{ count: number }>())?.count ?? 0;
 
-    const recent = db
+    const recent = await db
       .prepare(
         `SELECT id, user_name, action, resource_type, resource_id, title, created_at
          FROM activity_log
          WHERE resource_type != 'auth'
          ORDER BY created_at DESC LIMIT 10`
       )
-      .all() as Array<Record<string, string>>;
+      .all<Record<string, string>>();
 
-    const settings = (getSettings() || defaultSettings) as typeof defaultSettings;
+    const settings = ((await getSettings()) || defaultSettings) as typeof defaultSettings;
 
     res.json({
       stats,

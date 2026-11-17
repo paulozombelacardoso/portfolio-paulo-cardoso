@@ -52,9 +52,21 @@ export function errorHandler(error: unknown, _req: Request, res: Response, _next
     return;
   }
 
-  const maybeSqlite = error as { code?: string; message?: string };
-  if (maybeSqlite?.code?.startsWith("SQLITE_CONSTRAINT")) {
+  // PostgreSQL constraint violations.
+  const maybePg = error as { code?: string; message?: string };
+  if (maybePg?.code === "23505") {
     res.status(409).json({ error: "Já existe um registo com estes dados.", code: "CONFLICT" });
+    return;
+  }
+  if (maybePg?.code === "23503") {
+    res.status(409).json({
+      error: "O registo está associado a outros dados e não pode ser alterado/eliminado.",
+      code: "REFERENCE_CONFLICT"
+    });
+    return;
+  }
+  if (maybePg?.code === "22P02" || maybePg?.code === "22007" || maybePg?.code === "22008") {
+    res.status(422).json({ error: "Valor inválido num dos campos.", code: "VALIDATION_ERROR" });
     return;
   }
 

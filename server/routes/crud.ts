@@ -1,8 +1,8 @@
 import { Router, type Request } from "express";
 import type { ZodTypeAny } from "zod";
-import { db, logActivity, now } from "../db.js";
+import { clientRun, db, logActivity, now, transaction } from "../db.js";
 import { ApiError } from "../lib/http.js";
-import { asyncHandler, clamp, escapeLike, parseJson, randomId } from "../lib/util.js";
+import { asyncHandler, clamp, escapeLike, onlyProvided, parseJson, randomId, toBool } from "../lib/util.js";
 import { requireRole } from "../middleware/auth.js";
 import { reorderInput } from "../schemas.js";
 
@@ -20,7 +20,7 @@ export interface CrudConfig {
   searchColumns: string[];
   filters?: Record<string, string>;
   orderBy?: string;
-  prepare: (input: any, context: CrudContext) => Record<string, unknown>;
+  prepare: (input: any, context: CrudContext) => Record<string, unknown> | Promise<Record<string, unknown>>;
   serialize: (row: any) => any;
   label: (row: any) => string;
   idPrefix: string;
@@ -44,7 +44,7 @@ function buildFilters(config: CrudConfig, req: Request) {
   const published = queryString(req, "published");
   if (published === "true" || published === "false") {
     clauses.push("published = ?");
-    params.push(published === "true" ? 1 : 0);
+    params.push(published === "true");
   }
 
   for (const [param, column] of Object.entries(config.filters || {})) {
@@ -59,7 +59,7 @@ function buildFilters(config: CrudConfig, req: Request) {
   if (q && config.searchColumns.length > 0) {
     const term = `%${escapeLike(q)}%`;
     clauses.push(
-      `(${config.searchColumns.map((column) => `${column} LIKE ? ESCAPE '\\'`).join(" OR ")})`
+      `(${config.searchColumns.map((column) => `${column}::text ILIKE ? ESCAPE '\\'`).join(" OR ")})`
     );
     for (let index = 0; index < config.searchColumns.length; index += 1) {
       params.push(term);
@@ -80,15 +80,16 @@ export function createCrudRouter(config: CrudConfig) {
       const { clauses, params } = buildFilters(config, req);
       const where = clauses.length ? `WHERE ${clauses.join(" AND ")}` : "";
 
-      const total = (
-        db.prepare(`SELECT COUNT(*) AS count FROM ${config.table} ${where}`).get(...params) as {
-          count: number;
-        }
-      ).count;
+      const total =
+        (
+          await db
+            .prepare(`SELECT COUNT(*) AS count FROM ${config.table} ${where}`)
+            .get<{ count: number }>(...params)
+        )?.count ?? 0;
 
-      const rows = db
+      const rows = await db
         .prepare(`SELECT * FROM ${config.table} ${where} ORDER BY ${orderBy} LIMIT ? OFFSET ?`)
-        .all(...params, pageSize, offset) as any[];
+        .all(...params, pageSize, offset);
 
       res.json({
         items: rows.map(config.serialize),
@@ -105,21 +106,21 @@ export function createCrudRouter(config: CrudConfig) {
     asyncHandler(async (req, res) => {
       const parsed = config.createSchema.parse(req.body);
       const id = randomId(config.idPrefix);
-      const prepared = config.prepare(parsed, { mode: "create", id });
-      const row = {
+      const prepared = await config.prepare(parsed, { mode: "create", id });
+      const row: Record<string, unknown> = {
         id,
         ...prepared,
         created_at: now(),
         updated_at: now()
       };
       const columns = Object.keys(row);
-      db.prepare(
+      await db.prepare(
         `INSERT INTO ${config.table} (${columns.join(", ")}) VALUES (${columns
           .map(() => "?")
           .join(", ")})`
       ).run(...columns.map((column) => row[column]));
-      const created = db.prepare(`SELECT * FROM ${config.table} WHERE id = ?`).get(id);
-      logActivity({
+      const created = await db.prepare(`SELECT * FROM ${config.table} WHERE id = ?`).get(id);
+      await logActivity({
         userId: req.adminUser?.id,
         userName: req.adminUser?.name,
         action: "create",
@@ -135,14 +136,18 @@ export function createCrudRouter(config: CrudConfig) {
     "/reorder",
     asyncHandler(async (req, res) => {
       const input = reorderInput.parse(req.body);
-      const update = db.prepare(
-        `UPDATE ${config.table} SET sort_order = ?, updated_at = ? WHERE id = ?`
-      );
-      const transaction = db.transaction(() => {
-        input.ids.forEach((id, index) => update.run(index * 10, now(), id));
+      await transaction(async (client) => {
+        for (const [index, id] of input.ids.entries()) {
+          await clientRun(
+            client,
+            `UPDATE ${config.table} SET sort_order = ?, updated_at = ? WHERE id = ?`,
+            index * 10,
+            now(),
+            id
+          );
+        }
       });
-      transaction();
-      logActivity({
+      await logActivity({
         userId: req.adminUser?.id,
         userName: req.adminUser?.name,
         action: "reorder",
@@ -156,7 +161,7 @@ export function createCrudRouter(config: CrudConfig) {
   router.get(
     "/:id",
     asyncHandler(async (req, res) => {
-      const row = db.prepare(`SELECT * FROM ${config.table} WHERE id = ?`).get(req.params.id);
+      const row = await db.prepare(`SELECT * FROM ${config.table} WHERE id = ?`).get(String(req.params.id));
       if (!row) throw new ApiError(404, "Registo não encontrado.", "NOT_FOUND");
       res.json(config.serialize(row));
     })
@@ -165,34 +170,34 @@ export function createCrudRouter(config: CrudConfig) {
   router.patch(
     "/:id",
     asyncHandler(async (req, res) => {
-      const existing = db
+      const existing = await db
         .prepare(`SELECT * FROM ${config.table} WHERE id = ?`)
-        .get(req.params.id) as Record<string, unknown> | undefined;
+        .get<Record<string, unknown>>(String(req.params.id));
       if (!existing) throw new ApiError(404, "Registo não encontrado.", "NOT_FOUND");
 
-      const parsed = config.updateSchema.parse(req.body);
-      const prepared = config.prepare(parsed, {
+      const parsed = onlyProvided(config.updateSchema.parse(req.body) as Record<string, unknown>, req.body);
+      const prepared = await config.prepare(parsed, {
         mode: "update",
-        id: req.params.id,
+        id: String(req.params.id),
         existing
       });
       const columns = Object.keys(prepared);
       if (columns.length === 0) {
         throw new ApiError(400, "Nenhum campo para actualizar.", "NO_FIELDS");
       }
-      db.prepare(
+      await db.prepare(
         `UPDATE ${config.table} SET ${columns
           .map((column) => `${column} = ?`)
           .join(", ")}, updated_at = ? WHERE id = ?`
-      ).run(...columns.map((column) => prepared[column]), now(), req.params.id);
+      ).run(...columns.map((column) => prepared[column]), now(), String(req.params.id));
 
-      const updated = db.prepare(`SELECT * FROM ${config.table} WHERE id = ?`).get(req.params.id);
-      logActivity({
+      const updated = await db.prepare(`SELECT * FROM ${config.table} WHERE id = ?`).get(String(req.params.id));
+      await logActivity({
         userId: req.adminUser?.id,
         userName: req.adminUser?.name,
         action: "update",
         resourceType: config.key,
-        resourceId: req.params.id,
+        resourceId: String(req.params.id),
         title: config.label(updated)
       });
       res.json(config.serialize(updated));
@@ -203,18 +208,18 @@ export function createCrudRouter(config: CrudConfig) {
     "/:id",
     requireRole("admin"),
     asyncHandler(async (req, res) => {
-      const existing = db
+      const existing = await db
         .prepare(`SELECT * FROM ${config.table} WHERE id = ?`)
-        .get(req.params.id) as Record<string, unknown> | undefined;
+        .get<Record<string, unknown>>(String(req.params.id));
       if (!existing) throw new ApiError(404, "Registo não encontrado.", "NOT_FOUND");
 
-      db.prepare(`DELETE FROM ${config.table} WHERE id = ?`).run(req.params.id);
-      logActivity({
+      await db.prepare(`DELETE FROM ${config.table} WHERE id = ?`).run(String(req.params.id));
+      await logActivity({
         userId: req.adminUser?.id,
         userName: req.adminUser?.name,
         action: "delete",
         resourceType: config.key,
-        resourceId: req.params.id,
+        resourceId: String(req.params.id),
         title: config.label(existing)
       });
       res.status(204).end();
@@ -235,8 +240,8 @@ export function serializeRow(
     const value = row[column];
     if (jsonFields.includes(column)) {
       result[apiKey] = parseJson(value, []);
-    } else if (boolFields.includes(column)) {
-      result[apiKey] = value === 1;
+    } else if (boolFields.includes(column) || boolFields.includes(apiKey)) {
+      result[apiKey] = toBool(value);
     } else {
       result[apiKey] = value;
     }

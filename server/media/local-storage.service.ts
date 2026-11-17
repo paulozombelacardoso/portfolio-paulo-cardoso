@@ -87,7 +87,7 @@ export class LocalStorageService implements MediaStorageService {
     }
   }
 
-  generateTransformations(publicId: string): Record<string, string> {
+  generateTransformations(publicId: string, _resourceType?: string, _format?: string): Record<string, string> {
     const url = publicUrl(publicId);
     return {
       thumbnail: url,

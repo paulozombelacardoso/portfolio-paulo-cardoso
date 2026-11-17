@@ -2150,3 +2150,31 @@ nav a.act {
     scroll-behavior: auto !important;
   }
 }
+
+/* Estados do conteúdo dinâmico (API) */
+.page-loading {
+  min-height: 100vh;
+  background-color: var(--bg);
+}
+
+.maintenance-page {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  padding: 24px;
+  text-align: center;
+}
+
+.maintenance-page h1 {
+  margin: 8px 0 0;
+  font-size: 22px;
+}
+
+.maintenance-page p {
+  margin: 0;
+  max-width: 520px;
+  color: var(--mut);
+}

@@ -40,15 +40,15 @@ const projectConfig: CrudConfig = {
   searchColumns: ["content", "category", "technologies", "slug"],
   filters: { category: "category", status: "status" },
   orderBy: "sort_order ASC, created_at DESC",
-  prepare(input, context) {
+  async prepare(input, context) {
     const row: Record<string, unknown> = {};
     const existing = context.existing as any;
     const name = input.content?.pt?.name || localizedName(existing?.content) || "projecto";
     if (context.mode === "create" || "slug" in input) {
-      row.slug = ensureUniqueSlug(
+      row.slug = await ensureUniqueSlug(
         input.slug || name,
-        (candidate) => {
-          const found = db
+        async (candidate) => {
+          const found = await db
             .prepare("SELECT id FROM projects WHERE slug = ? AND id != ?")
             .get(candidate, context.id);
           return Boolean(found);

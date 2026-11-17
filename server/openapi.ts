@@ -1,14 +1,17 @@
-import { register as registerSwaggerUi, SwaggerUiOptions } from "swagger-ui-express";
-import type { Document } from "swagger-typescript-api";
+import type express from "express";
+import swaggerUi from "swagger-ui-express";
 
-const swaggerUiOptions: SwaggerUiOptions = {
-  deepLinking: true,
-  persistAuthorization: true,
-  docExpansion: "list",
-  tryItOutByDefault: true,
+const swaggerUiOptions = {
+  swaggerOptions: {
+    deepLinking: true,
+    persistAuthorization: true,
+    docExpansion: "list",
+    tryItOutsEnabled: true,
+    withCredentials: true
+  }
 };
 
-export const openApiDocument: Document = {
+export const openApiDocument: Record<string, any> = {
   openapi: "3.0.0",
   info: {
     title: "Portfolio CMS Admin API",
@@ -21,7 +24,7 @@ export const openApiDocument: Document = {
   },
   servers: [
     {
-      url: "http://localhost:4000/api",
+      url: "/api",
       description: "Development server"
     }
   ],
@@ -34,10 +37,15 @@ export const openApiDocument: Document = {
   components: {
     securitySchemes: {
       cookieAuth: {
-        type: "http",
+        type: "apiKey",
         in: "cookie",
-        scheme: "bearer",
-        bearerFormat: "jwt"
+        name: "pc_admin_session"
+      },
+      csrfHeader: {
+        type: "apiKey",
+        in: "header",
+        name: "X-Requested-With",
+        description: "Use o valor 'portfolio-cms' em pedidos POST/PUT/PATCH/DELETE."
       }
     },
     schemas: {
@@ -65,81 +73,6 @@ export const openApiDocument: Document = {
   security: [{ cookieAuth: [] }]
 };
 
-// Media endpoints
-const mediaResponses = {
-  200: {
-    description: "List of media assets",
-    content: {
-      "application/json": {
-        schema: {
-          type: "object",
-          properties: {
-            items: {
-              type: "array",
-              items: {
-                $ref: "#/components/schemas/StoredAsset"
-              }
-            },
-            total: { type: "integer" },
-            page: { type: "integer" },
-            pageSize: { type: "integer" },
-            pages: { type: "integer" }
-          }
-        }
-      }
-    }
-  },
-  401: { $ref: "#/components/schemas/ErrorResponse" }
-};
-
-const singleMediaResponse = {
-  200: {
-    description: "Media asset details",
-    content: {
-      "application/json": {
-        schema: { $ref: "#/components/schemas/StoredAsset" }
-      }
-    }
-  },
-  404: { $ref: "#/components/schemas/ErrorResponse" }
-};
-
-const uploadResponse = {
-  201: {
-    description: "Media uploaded successfully",
-    content: {
-      "application/json": {
-        schema: { $ref: "#/components/schemas/StoredAsset" }
-      }
-    }
-  },
-  400: { $ref: "#/components/schemas/ErrorResponse" },
-  413: { $ref: "#/components/schemas/ErrorResponse" },
-  415: { $ref: "#/components/schemas/ErrorResponse" }
-};
-
-const replaceResponse = {
-  200: {
-    description: "Media replaced successfully",
-    content: {
-      "application/json": {
-        schema: { $ref: "#/components/schemas/StoredAsset" }
-      }
-    }
-  },
-  404: { $ref: "#/components/schemas/ErrorResponse" },
-  500: { $ref: "#/components/schemas/ErrorResponse" }
-};
-
-const deleteResponse = {
-  204: {
-    description: "Media deleted successfully"
-  },
-  404: { $ref: "#/components/schemas/ErrorResponse" },
-  409: { $ref: "#/components/schemas/ErrorResponse" }
-};
-
-// StoredAsset schema
 const storedAssetSchema = {
   type: "object",
   properties: {
@@ -307,5 +240,164 @@ const crudItem = {
 };
 
 export function registerSwagger(app: express.Express) {
-  register(swaggerUiOptions)(app, "/api/docs", {});
+  app.use("/api/docs", swaggerUi.serve, swaggerUi.setup(openApiDocument, swaggerUiOptions));
 }
+// ---------------------------------------------------------------------------
+// Paths
+// ---------------------------------------------------------------------------
+const errorRef = { $ref: "#/components/schemas/ErrorResponse" };
+const jsonBody = (schema: unknown = { type: "object" }) => ({
+  required: true,
+  content: { "application/json": { schema } }
+});
+const ok = (description = "OK", schema: unknown = { type: "object" }) => ({
+  description,
+  content: { "application/json": { schema } }
+});
+const errors = {
+  401: ok("Não autenticado", errorRef),
+  403: ok("CSRF / permissão", errorRef),
+  422: ok("Dados inválidos", errorRef)
+};
+const idParam = { name: "id", in: "path", required: true, schema: { type: "string" } };
+const listParams = [
+  { name: "page", in: "query", schema: { type: "integer", default: 1 } },
+  { name: "pageSize", in: "query", schema: { type: "integer", default: 12 } },
+  { name: "q", in: "query", schema: { type: "string" } },
+  { name: "published", in: "query", schema: { type: "string", enum: ["true", "false"] } }
+];
+const write = [{ cookieAuth: [], csrfHeader: [] }];
+const multipart = (withFolder = true) => ({
+  required: true,
+  content: {
+    "multipart/form-data": {
+      schema: {
+        type: "object",
+        required: ["file"],
+        properties: {
+          file: { type: "string", format: "binary" },
+          ...(withFolder
+            ? {
+                folder: {
+                  type: "string",
+                  enum: ["profile", "projects", "certifications", "experiences", "education", "documents", "publications"]
+                }
+              }
+            : {}),
+          altText: { type: "string", maxLength: 300 }
+        }
+      }
+    }
+  }
+});
+
+const crudResources = [
+  "projects",
+  "experiences",
+  "certifications",
+  "education",
+  "courses",
+  "publications",
+  "skills",
+  "skill-categories"
+];
+
+const paths: Record<string, any> = {
+  "/health": { get: { tags: ["Public"], security: [], summary: "Health check", responses: { 200: ok() } } },
+  "/admin/auth/login": {
+    post: {
+      tags: ["Authentication"],
+      security: [{ csrfHeader: [] }],
+      summary: "Iniciar sessão (define o cookie pc_admin_session)",
+      requestBody: jsonBody(loginInput),
+      responses: { 200: ok(), 401: ok("Credenciais inválidas", errorRef), 429: ok("Rate limit", errorRef) }
+    }
+  },
+  "/admin/auth/logout": { post: { tags: ["Authentication"], security: write, responses: { 200: ok(), ...errors } } },
+  "/admin/auth/me": { get: { tags: ["Authentication"], responses: { 200: ok(), ...errors } } },
+  "/admin/auth/password": {
+    put: { tags: ["Authentication"], security: write, requestBody: jsonBody(passwordInput), responses: { 200: ok(), ...errors } }
+  },
+  "/admin/dashboard": { get: { tags: ["Admin"], summary: "Estatísticas e actividade recente", responses: { 200: ok(), ...errors } } },
+  "/admin/profile": {
+    get: { tags: ["Admin"], responses: { 200: ok(), ...errors } },
+    put: { tags: ["Admin"], security: write, requestBody: jsonBody(profileInput), responses: { 200: ok(), ...errors } }
+  },
+  "/admin/settings": {
+    get: { tags: ["Admin"], responses: { 200: ok(), ...errors } },
+    put: { tags: ["Admin"], security: write, requestBody: jsonBody(settingsInput), responses: { 200: ok(), ...errors } }
+  },
+  "/admin/cv": {
+    get: { tags: ["Admin"], responses: { 200: ok(), ...errors } },
+    post: { tags: ["Admin"], security: write, requestBody: jsonBody(), responses: { 201: ok(), ...errors } }
+  },
+  "/admin/cv/{id}": {
+    patch: { tags: ["Admin"], security: write, parameters: [idParam], requestBody: jsonBody(), responses: { 200: ok(), ...errors } },
+    delete: { tags: ["Admin"], security: write, parameters: [idParam], responses: { 204: { description: "Eliminado" }, ...errors } }
+  },
+  "/admin/cv/{id}/activate": {
+    post: { tags: ["Admin"], security: write, parameters: [idParam], responses: { 200: ok(), ...errors } }
+  },
+  "/admin/media": {
+    get: {
+      tags: ["Media"],
+      parameters: [
+        ...listParams.slice(0, 3),
+        { name: "kind", in: "query", schema: { type: "string", enum: ["image", "video", "document"] } },
+        { name: "folder", in: "query", schema: { type: "string" } }
+      ],
+      responses: { 200: ok("Lista", { type: "object", properties: { items: { type: "array", items: storedAssetSchema }, total: { type: "integer" }, page: { type: "integer" }, pageSize: { type: "integer" }, pages: { type: "integer" } } }), ...errors }
+    }
+  },
+  "/admin/media/upload": {
+    post: { tags: ["Media"], security: write, requestBody: multipart(), responses: { 201: ok("Carregado", storedAssetSchema), 413: ok("Demasiado grande", errorRef), 415: ok("Formato inválido", errorRef), ...errors } }
+  },
+  "/admin/media/{id}": {
+    get: { tags: ["Media"], parameters: [idParam], responses: { 200: ok("OK", storedAssetSchema), ...errors } },
+    patch: {
+      tags: ["Media"],
+      security: write,
+      parameters: [idParam],
+      requestBody: jsonBody({ type: "object", properties: { altText: { type: "string" } } }),
+      responses: { 200: ok("OK", storedAssetSchema), ...errors }
+    },
+    delete: { tags: ["Media"], security: write, parameters: [idParam], responses: { 204: { description: "Eliminado" }, 409: ok("Em uso", errorRef), ...errors } }
+  },
+  "/admin/media/{id}/replace": {
+    post: { tags: ["Media"], security: write, parameters: [idParam], requestBody: multipart(), responses: { 200: ok("Substituído", storedAssetSchema), ...errors } }
+  },
+  "/admin/media/{id}/usage": {
+    get: { tags: ["Media"], parameters: [idParam], responses: { 200: ok(), ...errors } }
+  },
+  "/public/portfolio": {
+    get: {
+      tags: ["Public"],
+      security: [],
+      parameters: [{ name: "lang", in: "query", schema: { type: "string", enum: ["pt", "en"] } }],
+      responses: { 200: ok() }
+    }
+  },
+  "/public/seo": { get: { tags: ["Public"], security: [], responses: { 200: ok() } } }
+};
+
+for (const resource of crudResources) {
+  paths[`/admin/${resource}`] = {
+    get: { tags: ["Admin"], parameters: listParams, responses: { 200: ok(), ...errors } },
+    post: { tags: ["Admin"], security: write, requestBody: jsonBody(), responses: { 201: ok("Criado", crudItem), ...errors } }
+  };
+  paths[`/admin/${resource}/reorder`] = {
+    post: {
+      tags: ["Admin"],
+      security: write,
+      requestBody: jsonBody({ type: "object", properties: { ids: { type: "array", items: { type: "string" } } } }),
+      responses: { 200: ok(), ...errors }
+    }
+  };
+  paths[`/admin/${resource}/{id}`] = {
+    get: { tags: ["Admin"], parameters: [idParam], responses: { 200: ok("OK", crudItem), ...errors } },
+    patch: { tags: ["Admin"], security: write, parameters: [idParam], requestBody: jsonBody(), responses: { 200: ok("OK", crudItem), ...errors } },
+    delete: { tags: ["Admin"], security: write, parameters: [idParam], responses: { 204: { description: "Eliminado" }, ...errors } }
+  };
+}
+
+openApiDocument.paths = paths;

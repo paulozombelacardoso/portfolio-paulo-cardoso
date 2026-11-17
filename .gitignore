@@ -46,3 +46,6 @@ coverage/
 # Ficheiros de backup
 *.bak
 *.tmp
+
+# Uploads locais (MEDIA_DRIVER=local)
+data/

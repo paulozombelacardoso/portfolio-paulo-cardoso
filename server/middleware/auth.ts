@@ -44,29 +44,29 @@ export function setSessionCookie(res: Response, token: string) {
   const options: CookieOptions = {
     httpOnly: true,
     sameSite: "lax",
-    secure: config.cookieSecure,
+    secure: config.session.cookieSecure,
     path: "/",
-    maxAge: config.sessionTtlHours * 60 * 60 * 1000
+    maxAge: config.session.ttlHours * 60 * 60 * 1000
   };
-  res.cookie(config.sessionCookie, token, options);
+  res.cookie(config.session.cookieName, token, options);
 }
 
 export function clearSessionCookie(res: Response) {
-  res.clearCookie(config.sessionCookie, {
+  res.clearCookie(config.session.cookieName, {
     httpOnly: true,
     sameSite: "lax",
-    secure: config.cookieSecure,
+    secure: config.session.cookieSecure,
     path: "/"
   });
 }
 
-export function createSession(userId: string, req: Request) {
-  pruneExpiredSessions();
+export async function createSession(userId: string, req: Request) {
+  await pruneExpiredSessions();
 
   const token = shortToken(40);
-  const expiresAt = new Date(Date.now() + config.sessionTtlHours * 60 * 60 * 1000).toISOString();
+  const expiresAt = new Date(Date.now() + config.session.ttlHours * 60 * 60 * 1000).toISOString();
 
-  db.prepare(
+  await db.prepare(
     `INSERT INTO sessions (id, user_id, token_hash, ip, user_agent, expires_at, created_at)
      VALUES (?, ?, ?, ?, ?, ?, ?)`
   ).run(
@@ -80,7 +80,7 @@ export function createSession(userId: string, req: Request) {
   );
 
   // Keep a bounded number of active sessions per account.
-  db.prepare(
+  await db.prepare(
     `DELETE FROM sessions
      WHERE user_id = ? AND id NOT IN (
        SELECT id FROM sessions WHERE user_id = ? ORDER BY created_at DESC LIMIT 10
@@ -90,25 +90,29 @@ export function createSession(userId: string, req: Request) {
   return token;
 }
 
-export function destroySession(token: string | undefined) {
+export async function destroySession(token: string | undefined) {
   if (!token) return;
-  db.prepare("DELETE FROM sessions WHERE token_hash = ?").run(hashToken(token));
+  await db.prepare("DELETE FROM sessions WHERE token_hash = ?").run(hashToken(token));
 }
 
-export function requireAuth(req: Request, res: Response, next: NextFunction) {
-  const token = req.cookies?.[config.sessionCookie];
+export const requireAuth = (req: Request, res: Response, next: NextFunction) => {
+  requireAuthAsync(req, res, next).catch(next);
+};
+
+async function requireAuthAsync(req: Request, res: Response, next: NextFunction) {
+  const token = req.cookies?.[config.session.cookieName];
   if (!token || typeof token !== "string") {
     res.status(401).json({ error: "Sessão inválida ou expirada.", code: "UNAUTHENTICATED" });
     return;
   }
 
-  const row = db
+  const row = (await db
     .prepare(
       `SELECT s.id AS session_id, s.expires_at, u.id, u.email, u.name, u.role, u.is_active
        FROM sessions s JOIN admin_users u ON u.id = s.user_id
        WHERE s.token_hash = ?`
     )
-    .get(hashToken(token)) as
+    .get(hashToken(token))) as
     | {
         session_id: string;
         expires_at: string;
@@ -116,13 +120,13 @@ export function requireAuth(req: Request, res: Response, next: NextFunction) {
         email: string;
         name: string;
         role: "admin" | "editor";
-        is_active: number;
+        is_active: boolean;
       }
     | undefined;
 
   if (!row || new Date(row.expires_at).getTime() <= Date.now() || !toBool(row.is_active)) {
     if (row) {
-      db.prepare("DELETE FROM sessions WHERE id = ?").run(row.session_id);
+      await db.prepare("DELETE FROM sessions WHERE id = ?").run(row.session_id);
     }
     clearSessionCookie(res);
     res.status(401).json({ error: "Sessão inválida ou expirada.", code: "UNAUTHENTICATED" });
@@ -160,7 +164,7 @@ export function requireCsrf(req: Request, res: Response, next: NextFunction) {
   }
 
   const origin = req.get("origin");
-  if (origin && config.allowedOrigins.length > 0 && !config.allowedOrigins.includes(origin)) {
+  if (origin && config.security.allowedOrigins.length > 0 && !config.security.allowedOrigins.includes(origin)) {
     res.status(403).json({ error: "Origem não autorizada.", code: "ORIGIN_REJECTED" });
     return;
   }

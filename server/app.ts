@@ -88,13 +88,14 @@ export function createApp() {
   app.get("/api/openapi.json", (_req, res) => {
     res.json(openApiDocument);
   });
+  registerSwagger(app);
   app.use("/api", notFound);
 
   // Serve uploads only for local/memory dev driver
   if (config.storage.driver !== "cloudinary") {
     app.use(
       "/uploads",
-      express.static(config.uploadDir, {
+      express.static(config.storage.localDir, {
         index: false,
         dotfiles: "deny",
         maxAge: config.isProduction ? "365d" : 0,
@@ -122,6 +123,5 @@ export function createApp() {
 
   app.use(notFound);
   app.use(errorHandler);
-  registerSwagger(app);
   return app;
 }

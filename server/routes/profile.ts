@@ -24,7 +24,7 @@ function serializeProfile(row: any) {
 profileRouter.get(
   "/",
   asyncHandler(async (_req, res) => {
-    const row = db.prepare("SELECT * FROM profile WHERE id = 1").get();
+    const row = await db.prepare("SELECT * FROM profile WHERE id = 1").get();
     if (!row) throw new ApiError(404, "Perfil não encontrado.", "NOT_FOUND");
     res.json(serializeProfile(row));
   })
@@ -34,7 +34,7 @@ profileRouter.put(
   "/",
   asyncHandler(async (req, res) => {
     const input = profileInput.parse(req.body);
-    db.prepare(
+    await db.prepare(
       `UPDATE profile SET content = ?, email = ?, phone = ?, location = ?, photo_url = ?,
        github_url = ?, linkedin_url = ?, leetcode_url = ?, codeforces_url = ?, updated_at = ?
        WHERE id = 1`
@@ -50,14 +50,14 @@ profileRouter.put(
       input.codeforcesUrl,
       now()
     );
-    const row = db.prepare("SELECT * FROM profile WHERE id = 1").get() as any;
-    logActivity({
+    const row = await db.prepare("SELECT * FROM profile WHERE id = 1").get();
+    await logActivity({
       userId: req.adminUser?.id,
       userName: req.adminUser?.name,
       action: "update",
       resourceType: "profile",
       resourceId: "profile",
-      title: parseJson(row?.content, {})?.pt?.name || "Perfil"
+      title: parseJson<any>(row?.content, {})?.pt?.name || "Perfil"
     });
     res.json(serializeProfile(row));
   })

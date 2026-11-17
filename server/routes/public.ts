@@ -1,7 +1,7 @@
 import { Router, type Request } from "express";
 import { db, getSettings } from "../db.js";
 import { defaultSettings } from "../defaults.js";
-import { asyncHandler, formatDatePt, formatPeriod, localizedValue, parseJson, pickLocale } from "../lib/util.js";
+import { asyncHandler, formatDatePt, formatPeriod, localizedValue, parseJson, pickLocale, toBool } from "../lib/util.js";
 
 export const publicRouter = Router();
 
@@ -57,11 +57,15 @@ function ensureSections(settings: any) {
     .sort((a: any, b: any) => Number(a.order) - Number(b.order));
 }
 
-function buildPortfolio(lang: Lang) {
-  const settings = {
+async function loadSettings() {
+  return {
     ...defaultSettings,
-    ...(getSettings() || {})
+    ...((await getSettings()) || {})
   } as typeof defaultSettings;
+}
+
+async function buildPortfolio(lang: Lang) {
+  const settings = await loadSettings();
 
   if (!settings.sitePublished) {
     return {
@@ -75,9 +79,9 @@ function buildPortfolio(lang: Lang) {
     };
   }
 
-  const profileRow = db.prepare("SELECT * FROM profile WHERE id = 1").get() as any;
+  const profileRow = await db.prepare("SELECT * FROM profile WHERE id = 1").get();
   const profileContent = profileRow ? pickLocale<any>(parseJson(profileRow.content, {}), lang) : {};
-  const activeCv = db.prepare("SELECT * FROM cvs WHERE is_active = 1 LIMIT 1").get() as any;
+  const activeCv = await db.prepare("SELECT * FROM cvs WHERE is_active = TRUE LIMIT 1").get();
   const cvFile = activeCv?.file_url || "cv/Paulo_Cardoso_CV.pdf";
   const githubUrl = profileRow?.github_url || defaultSettings.social.github;
 
@@ -102,11 +106,11 @@ function buildPortfolio(lang: Lang) {
     cvDownload: activeCv?.file_name || basename(cvFile)
   };
 
-  const projectRows = db
+  const projectRows = await db
     .prepare(
-      "SELECT * FROM projects WHERE published = 1 ORDER BY featured DESC, sort_order ASC, created_at DESC"
+      "SELECT * FROM projects WHERE published = TRUE ORDER BY featured DESC, sort_order ASC, created_at DESC"
     )
-    .all() as any[];
+    .all();
   const projectItems = projectRows.map((row) => {
     const content = pickLocale<any>(parseJson(row.content, {}), lang);
     return {
@@ -125,17 +129,17 @@ function buildPortfolio(lang: Lang) {
       learnings: content.learnings || "",
       github: row.github_url || undefined,
       demo: row.demo_url || undefined,
-      featured: row.featured === 1,
+      featured: toBool(row.featured),
       status: row.status
     };
   });
 
-  const experienceRows = db
+  const experienceRows = await db
     .prepare(
-      `SELECT * FROM experiences WHERE published = 1
+      `SELECT * FROM experiences WHERE published = TRUE
        ORDER BY sort_order ASC, COALESCE(start_date, '9999-12-31') DESC`
     )
-    .all() as any[];
+    .all();
   const experienceItems = experienceRows.map((row) => {
     const content = pickLocale<any>(parseJson(row.content, {}), lang);
     return {
@@ -147,7 +151,7 @@ function buildPortfolio(lang: Lang) {
       period: formatPeriod(
         row.start_date,
         row.end_date,
-        row.is_current === 1,
+        toBool(row.is_current),
         content.period,
         lang
       ),
@@ -161,12 +165,12 @@ function buildPortfolio(lang: Lang) {
     };
   });
 
-  const educationRows = db
+  const educationRows = await db
     .prepare(
-      `SELECT * FROM education WHERE published = 1
+      `SELECT * FROM education WHERE published = TRUE
        ORDER BY sort_order ASC, COALESCE(start_date, '9999-12-31') DESC`
     )
-    .all() as any[];
+    .all();
   const education = educationRows.map((row) => {
     const content = pickLocale<any>(parseJson(row.content, {}), lang);
     const fallbackPeriod =
@@ -194,12 +198,12 @@ function buildPortfolio(lang: Lang) {
     };
   });
 
-  const certificateRows = db
+  const certificateRows = await db
     .prepare(
-      `SELECT * FROM certifications WHERE published = 1
+      `SELECT * FROM certifications WHERE published = TRUE
        ORDER BY sort_order ASC, COALESCE(issue_date, '1900-01-01') DESC`
     )
-    .all() as any[];
+    .all();
   const certificates = certificateRows.map((row) => {
     const content = pickLocale<any>(parseJson(row.content, {}), lang);
     const file = row.file_url || "";
@@ -220,15 +224,15 @@ function buildPortfolio(lang: Lang) {
     };
   });
 
-  const skillRows = db
+  const skillRows = await db
     .prepare(
       `SELECT s.*, c.name AS category_name, c.description AS category_description,
               c.icon AS category_icon, c.sort_order AS category_sort
        FROM skills s JOIN skill_categories c ON c.id = s.category_id
-       WHERE s.published = 1
+       WHERE s.published = TRUE
        ORDER BY c.sort_order ASC, s.sort_order ASC, s.name ASC`
     )
-    .all() as any[];
+    .all();
   const categoryMap = new Map<string, any>();
   for (const row of skillRows) {
     if (!categoryMap.has(row.category_id)) {
@@ -244,12 +248,12 @@ function buildPortfolio(lang: Lang) {
   }
   const stackCategories = Array.from(categoryMap.values()).filter((category) => category.items.length > 0);
 
-  const courseRows = db
+  const courseRows = await db
     .prepare(
-      `SELECT * FROM courses WHERE published = 1
+      `SELECT * FROM courses WHERE published = TRUE
        ORDER BY sort_order ASC, COALESCE(completed_at, '1900-01-01') DESC`
     )
-    .all() as any[];
+    .all();
   const courses = courseRows.map((row) => {
     const content = pickLocale<any>(parseJson(row.content, {}), lang);
     return {
@@ -264,12 +268,12 @@ function buildPortfolio(lang: Lang) {
     };
   });
 
-  const publicationRows = db
+  const publicationRows = await db
     .prepare(
-      `SELECT * FROM publications WHERE published = 1
+      `SELECT * FROM publications WHERE published = TRUE
        ORDER BY sort_order ASC, COALESCE(published_at, '1900-01-01') DESC`
     )
-    .all() as any[];
+    .all();
   const publications = publicationRows.map((row) => {
     const content = pickLocale<any>(parseJson(row.content, {}), lang);
     return {
@@ -313,6 +317,14 @@ publicRouter.get(
   asyncHandler(async (req, res) => {
     const lang = getLang(req);
     res.setHeader("Cache-Control", "no-store");
-    res.json(buildPortfolio(lang));
+    res.json(await buildPortfolio(lang));
+  })
+);
+
+publicRouter.get(
+  "/seo",
+  asyncHandler(async (_req, res) => {
+    const settings = await loadSettings();
+    res.json({ seo: settings.seo, sitePublished: Boolean(settings.sitePublished) });
   })
 );

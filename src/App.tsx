@@ -19,15 +19,11 @@ import {
   CheckCircle2,
   FileText,
   Globe,
-  ChevronDown
+  ChevronDown,
+  BookOpen,
+  Newspaper
 } from "lucide-react";
 import {
-  profile,
-  stackCategories,
-  projects,
-  experiences,
-  educationList,
-  certificatesList,
   getProfile,
   getStackCategories,
   getProjects,
@@ -48,6 +44,11 @@ import { AboutCardsCarousel } from "./components/AboutCardsCarousel";
 import { AnimatedLead } from "./components/AnimatedLead";
 import { useScrollReveal } from "./hooks/useScrollReveal";
 import { getTechIconUrl, getTechSlug } from "./techIcons";
+import { usePortfolio } from "./usePortfolio";
+
+/** Secções reordenáveis/ocultáveis a partir do painel admin (Configurações). */
+const DEFAULT_SECTION_ORDER = ["about", "stack", "projects", "experience", "education", "courses", "publications", "contact"];
+const DEFAULT_HIDDEN = new Set(["courses", "publications"]);
 
 type Theme = "system" | "light" | "dark";
 
@@ -107,12 +108,29 @@ export default function App() {
   const [lang, setLang] = useLanguage();
   const t = translations[lang];
 
-  const currentProfile = getProfile(lang);
-  const currentStack = getStackCategories(lang);
-  const currentProjects = getProjects(lang);
-  const currentExperiences = getExperiences(lang);
-  const currentEducation = getEducationList(lang);
-  const currentCerts = getCertificatesList(lang);
+  // Conteúdo vindo da API pública (só conteúdo publicado); fallback estático se a API falhar.
+  const portfolio = usePortfolio(lang);
+  const currentProfile = portfolio?.profile ?? getProfile(lang);
+  const currentStack = portfolio?.stackCategories ?? getStackCategories(lang);
+  const currentProjects = portfolio?.projects ?? getProjects(lang);
+  const currentExperiences = portfolio?.experiences ?? getExperiences(lang);
+  const currentEducation = portfolio?.educationList ?? getEducationList(lang);
+  const currentCerts = portfolio?.certificatesList ?? getCertificatesList(lang);
+  const currentCourses = portfolio?.courses ?? [];
+  const currentPublications = portfolio?.publications ?? [];
+
+  const sectionSettings = portfolio?.sections;
+  const orderedSections = sectionSettings
+    ? sectionSettings
+        .slice()
+        .sort((a, b) => a.order - b.order)
+        .filter((section) => section.visible)
+        .map((section) => section.key)
+    : DEFAULT_SECTION_ORDER.filter((key) => !DEFAULT_HIDDEN.has(key));
+  const isVisible = (key: string) =>
+    orderedSections.includes(key) &&
+    (key !== "courses" || currentCourses.length > 0) &&
+    (key !== "publications" || currentPublications.length > 0);
 
   const [menuOpen, setMenuOpen] = useState(false);
   const [activeSection, setActiveSection] = useState("home");
@@ -140,17 +158,20 @@ export default function App() {
   const [photoError, setPhotoError] = useState(false);
 
   // Ativação da animação suave de subida ao fazer scroll
-  useScrollReveal([lang, currentStack, currentProjects, currentExperiences, currentEducation, currentCerts]);
+  useScrollReveal([lang, portfolio, currentStack, currentProjects, currentExperiences, currentEducation, currentCerts]);
 
-  const navItems = [
+  const navLabels: Record<string, string> = {
+    about: t.nav.about,
+    stack: t.nav.stack,
+    projects: t.nav.projects,
+    experience: t.nav.experience,
+    education: t.nav.education,
+    contact: t.nav.contact
+  };
+  const navItems: Array<readonly [string, string]> = [
     ["home", t.nav.home],
-    ["about", t.nav.about],
-    ["stack", t.nav.stack],
-    ["projects", t.nav.projects],
-    ["experience", t.nav.experience],
-    ["education", t.nav.education],
-    ["contact", t.nav.contact]
-  ] as const;
+    ...orderedSections.filter((key) => navLabels[key] && isVisible(key)).map((key) => [key, navLabels[key]] as const)
+  ];
 
   useEffect(() => {
     const observer = new IntersectionObserver(
@@ -176,7 +197,8 @@ export default function App() {
       observer.disconnect();
       window.removeEventListener("scroll", handleScroll);
     };
-  }, [lang]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [lang, portfolio]);
 
   const nextTheme = () =>
     setTheme(theme === "dark" ? "light" : theme === "light" ? "system" : "dark");
@@ -202,215 +224,9 @@ export default function App() {
     )}&body=${encodeURIComponent(`${message}\n\n${t.contact.emailBodyFrom(name, email)}`)}`;
   };
 
-  return (
-    <>
-      {/* 1. Header / Navegação Principal */}
-      <header className="top">
-        <a href="#home" className="logo" aria-label="Paulo Cardoso — Início">
-          <span className="mark">&lt;P&gt;</span>
-          <span className="logo-name">PAULO CARDOSO</span>
-        </a>
-
-        <nav className={menuOpen ? "open" : ""} aria-label="Navegação Principal">
-          {navItems.map(([id, label]) => (
-            <a
-              key={id}
-              href={`#${id}`}
-              className={activeSection === id ? "act" : ""}
-              onClick={() => setMenuOpen(false)}
-            >
-              {label}
-            </a>
-          ))}
-        </nav>
-
-        <div className="tools">
-          {/* Seletor de Idioma (PT / EN) */}
-          <div
-            className="lang-select-wrapper"
-            title={lang === "pt" ? "Alternar idioma / Switch language" : "Switch language / Alternar idioma"}
-          >
-            <Globe size={14} className="lang-select-icon" />
-            <select
-              value={lang}
-              onChange={(e) => setLang(e.target.value as Lang)}
-              className="lang-select-btn"
-              aria-label={lang === "pt" ? "Selecionar idioma" : "Select language"}
-            >
-              <option value="pt">PT</option>
-              <option value="en">EN</option>
-            </select>
-            <ChevronDown size={11} className="lang-select-arrow" />
-          </div>
-
-          <a
-            href={currentProfile.cvFile}
-            download={currentProfile.cvDownload}
-            className="nav-cv-btn"
-            title={lang === "pt" ? "Descarregar Currículo em PDF" : "Download Resume in PDF"}
-          >
-            <Download size={14} /> CV
-          </a>
-
-          <button
-            className="icon-btn"
-            onClick={nextTheme}
-            aria-label={`Mudar tema (actual: ${theme})`}
-            title={`Tema: ${theme}`}
-          >
-            <ThemeIcon size={16} />
-          </button>
-
-          <button
-            className="icon-btn burger"
-            onClick={() => setMenuOpen(!menuOpen)}
-            aria-label={menuOpen ? "Fechar menu" : "Abrir menu"}
-            aria-expanded={menuOpen}
-          >
-            {menuOpen ? <X size={18} /> : <Menu size={18} />}
-          </button>
-        </div>
-      </header>
-
-      {/* 2. Barra Lateral de Redes / Perfis (Desktop) */}
-      <aside className="side" aria-label="Perfis Técnicos">
-        <a
-          href={profile.githubUrl}
-          target="_blank"
-          rel="noopener noreferrer"
-          aria-label="GitHub de Paulo Cardoso"
-          title="GitHub (@paulozombelacardoso)"
-        >
-          <Github size={18} />
-        </a>
-        <a
-          href={profile.linkedin}
-          target="_blank"
-          rel="noopener noreferrer"
-          aria-label="LinkedIn de Paulo Cardoso"
-          title="LinkedIn"
-        >
-          <Linkedin size={18} />
-        </a>
-        <a
-          href={profile.leetcode}
-          target="_blank"
-          rel="noopener noreferrer"
-          aria-label="LeetCode de Paulo Cardoso"
-          title="LeetCode (PaulCard123)"
-        >
-          <LeetCodeIcon size={18} />
-        </a>
-        <a
-          href={profile.codeforces}
-          target="_blank"
-          rel="noopener noreferrer"
-          aria-label="Codeforces de Paulo Cardoso"
-          title="Codeforces (Sunjinwoo42)"
-        >
-          <CodeforcesIcon size={18} />
-        </a>
-        <span className="side-line" />
-      </aside>
-
-      <main>
-        {/* 3. Hero Section — Apresentação Pessoal */}
-        <section id="home" className="hero-section">
-          <div className="hero-grid">
-            <div className="hero-content">
-              <h1 className="hero-name">{currentProfile.name}</h1>
-              <h2 className="hero-title">{currentProfile.title}</h2>
-
-              <AnimatedLead
-                phrases={
-                  currentProfile.rotatingLeads && currentProfile.rotatingLeads.length > 0
-                    ? currentProfile.rotatingLeads
-                    : [currentProfile.lead]
-                }
-              />
-
-              <p className="hero-bio">{currentProfile.shortBio}</p>
-
-              <div className="hero-actions">
-                <a className="btn solid" href="#projects">
-                  {t.hero.viewProjects}
-                </a>
-                <a
-                  className="btn outline"
-                  href={currentProfile.cvFile}
-                  download={currentProfile.cvDownload}
-                >
-                  <Download size={15} /> {t.hero.downloadCv}
-                </a>
-              </div>
-
-              <div className="hero-social-list" aria-label="Redes e contactos">
-                <a
-                  href={currentProfile.githubUrl}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="hero-social-item"
-                  title="GitHub"
-                >
-                  <Github size={16} /> <span>GitHub</span>
-                </a>
-                <a
-                  href={currentProfile.linkedin}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="hero-social-item"
-                  title="LinkedIn"
-                >
-                  <Linkedin size={16} /> <span>LinkedIn</span>
-                </a>
-                <a
-                  href={currentProfile.leetcode}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="hero-social-item"
-                  title="LeetCode"
-                >
-                  <LeetCodeIcon size={16} /> <span>LeetCode</span>
-                </a>
-                <a
-                  href={currentProfile.codeforces}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="hero-social-item"
-                  title="Codeforces"
-                >
-                  <CodeforcesIcon size={16} /> <span>Codeforces</span>
-                </a>
-                <a
-                  href={`mailto:${currentProfile.email}`}
-                  className="hero-social-item"
-                  title="Email"
-                >
-                  <Mail size={16} /> <span>Email</span>
-                </a>
-              </div>
-            </div>
-
-            <div className="hero-image-wrap">
-              <div className="photo-container">
-                {!photoError ? (
-                  <img
-                    src={currentProfile.photo}
-                    alt={`Fotografia de ${currentProfile.name}`}
-                    className="hero-photo"
-                    onError={() => setPhotoError(true)}
-                  />
-                ) : (
-                  <div className="photo-fallback">
-                    <span>PC</span>
-                  </div>
-                )}
-              </div>
-            </div>
-          </div>
-        </section>
-
-        {/* 4. Sobre Mim */}
+  const sectionNodes: Record<string, React.ReactNode> = {
+    /* 4. Sobre Mim */
+    about: (
         <section id="about" className="section">
           <div className="section-head">
             <span className="section-kicker">{t.about.kicker}</span>
@@ -442,8 +258,9 @@ export default function App() {
             />
           </div>
         </section>
-
-        {/* 5. Stack Tecnológica */}
+    ),
+    /* 5. Stack Tecnológica */
+    stack: (
         <section id="stack" className="section">
           <div className="section-head reveal-card">
             <span className="section-kicker">{t.stack.kicker}</span>
@@ -462,8 +279,9 @@ export default function App() {
             ))}
           </div>
         </section>
-
-        {/* 6. Projectos Técnicos */}
+    ),
+    /* 6. Projectos Técnicos */
+    projects: (
         <section id="projects" className="section">
           <div className="section-head reveal-card">
             <span className="section-kicker">{t.projects.kicker}</span>
@@ -485,8 +303,9 @@ export default function App() {
             ))}
           </div>
         </section>
-
-        {/* 7. Experiência Profissional */}
+    ),
+    /* 7. Experiência Profissional */
+    experience: (
         <section id="experience" className="section">
           <div className="section-head reveal-card">
             <span className="section-kicker">{t.experience.kicker}</span>
@@ -507,8 +326,9 @@ export default function App() {
             ))}
           </div>
         </section>
-
-        {/* 8. Formação & Certificações */}
+    ),
+    /* 8. Formação & Certificações */
+    education: (
         <section id="education" className="section">
           <div className="section-head reveal-card">
             <span className="section-kicker">{t.education.kicker}</span>
@@ -598,8 +418,88 @@ export default function App() {
             </div>
           </div>
         </section>
-
-        {/* 9. Contacto */}
+    ),
+    /* Cursos e Formações (gerido no painel admin) */
+    courses: (
+        <section id="courses" className="section">
+          <div className="section-head reveal-card">
+            <span className="section-kicker">{lang === "pt" ? "Formação Complementar" : "Further Training"}</span>
+            <h2 className="section-title">{lang === "pt" ? "Cursos & Workshops" : "Courses & Workshops"}</h2>
+          </div>
+          <div className="edu-grid">
+            {currentCourses.map((course, idx) => (
+              <div
+                key={course.id}
+                className="edu-card reveal-card"
+                tabIndex={0}
+                style={{ "--reveal-delay": `${(idx % 3) * 90}ms` } as React.CSSProperties}
+              >
+                <div className="edu-card-top">
+                  <div className="edu-icon-wrap">
+                    <BookOpen size={20} />
+                  </div>
+                  <div>
+                    {course.date && <span className="edu-period">{course.date}</span>}
+                    <h3 className="edu-degree">{course.title}</h3>
+                    <h4 className="edu-school">{course.provider}</h4>
+                  </div>
+                </div>
+                {course.description && <p className="edu-desc">{course.description}</p>}
+                {(course.url || course.file) && (
+                  <a
+                    className="cert-card-action"
+                    href={course.url || course.file}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                  >
+                    <span>{t.education.viewDoc}</span>
+                    <ExternalLink size={13} />
+                  </a>
+                )}
+              </div>
+            ))}
+          </div>
+        </section>
+    ),
+    /* Publicações (gerido no painel admin) */
+    publications: (
+        <section id="publications" className="section">
+          <div className="section-head reveal-card">
+            <span className="section-kicker">{lang === "pt" ? "Comunidade" : "Community"}</span>
+            <h2 className="section-title">{lang === "pt" ? "Publicações & Eventos" : "Publications & Events"}</h2>
+          </div>
+          <div className="edu-grid">
+            {currentPublications.map((pub, idx) => (
+              <div
+                key={pub.id}
+                className="edu-card reveal-card"
+                tabIndex={0}
+                style={{ "--reveal-delay": `${(idx % 3) * 90}ms` } as React.CSSProperties}
+              >
+                <div className="edu-card-top">
+                  <div className="edu-icon-wrap">
+                    <Newspaper size={20} />
+                  </div>
+                  <div>
+                    {pub.date && <span className="edu-period">{pub.date}</span>}
+                    <h3 className="edu-degree">{pub.title}</h3>
+                    {pub.publisher && <h4 className="edu-school">{pub.publisher}</h4>}
+                  </div>
+                </div>
+                {pub.excerpt && <p className="edu-desc">{pub.excerpt}</p>}
+                {pub.url && (
+                  <a className="cert-card-action" href={pub.url} target="_blank" rel="noopener noreferrer">
+                    <span>{lang === "pt" ? "Ler mais" : "Read more"}</span>
+                    <ExternalLink size={13} />
+                  </a>
+                )}
+              </div>
+            ))}
+          </div>
+        </section>
+    ),
+    /* 9. Contacto */
+    contact: (
         <section id="contact" className="section">
           <div className="section-head">
             <span className="section-kicker">{t.contact.kicker}</span>
@@ -728,6 +628,235 @@ export default function App() {
             </form>
           </div>
         </section>
+    ),
+  };
+
+
+  if (!portfolio) {
+    return <div className="page-loading" aria-busy="true" aria-label="A carregar" />;
+  }
+
+  if (!portfolio.sitePublished) {
+    return (
+      <main className="maintenance-page">
+        <span className="mark">&lt;P&gt;</span>
+        <h1>{currentProfile.name}</h1>
+        <p>{portfolio.maintenanceMessage}</p>
+      </main>
+    );
+  }
+  return (
+    <>
+      {/* 1. Header / Navegação Principal */}
+      <header className="top">
+        <a href="#home" className="logo" aria-label="Paulo Cardoso — Início">
+          <span className="mark">&lt;P&gt;</span>
+          <span className="logo-name">PAULO CARDOSO</span>
+        </a>
+
+        <nav className={menuOpen ? "open" : ""} aria-label="Navegação Principal">
+          {navItems.map(([id, label]) => (
+            <a
+              key={id}
+              href={`#${id}`}
+              className={activeSection === id ? "act" : ""}
+              onClick={() => setMenuOpen(false)}
+            >
+              {label}
+            </a>
+          ))}
+        </nav>
+
+        <div className="tools">
+          {/* Seletor de Idioma (PT / EN) */}
+          <div
+            className="lang-select-wrapper"
+            title={lang === "pt" ? "Alternar idioma / Switch language" : "Switch language / Alternar idioma"}
+          >
+            <Globe size={14} className="lang-select-icon" />
+            <select
+              value={lang}
+              onChange={(e) => setLang(e.target.value as Lang)}
+              className="lang-select-btn"
+              aria-label={lang === "pt" ? "Selecionar idioma" : "Select language"}
+            >
+              <option value="pt">PT</option>
+              <option value="en">EN</option>
+            </select>
+            <ChevronDown size={11} className="lang-select-arrow" />
+          </div>
+
+          <a
+            href={currentProfile.cvFile}
+            download={currentProfile.cvDownload}
+            className="nav-cv-btn"
+            title={lang === "pt" ? "Descarregar Currículo em PDF" : "Download Resume in PDF"}
+          >
+            <Download size={14} /> CV
+          </a>
+
+          <button
+            className="icon-btn"
+            onClick={nextTheme}
+            aria-label={`Mudar tema (actual: ${theme})`}
+            title={`Tema: ${theme}`}
+          >
+            <ThemeIcon size={16} />
+          </button>
+
+          <button
+            className="icon-btn burger"
+            onClick={() => setMenuOpen(!menuOpen)}
+            aria-label={menuOpen ? "Fechar menu" : "Abrir menu"}
+            aria-expanded={menuOpen}
+          >
+            {menuOpen ? <X size={18} /> : <Menu size={18} />}
+          </button>
+        </div>
+      </header>
+
+      {/* 2. Barra Lateral de Redes / Perfis (Desktop) */}
+      <aside className="side" aria-label="Perfis Técnicos">
+        <a
+          href={currentProfile.githubUrl}
+          target="_blank"
+          rel="noopener noreferrer"
+          aria-label="GitHub de Paulo Cardoso"
+          title="GitHub (@paulozombelacardoso)"
+        >
+          <Github size={18} />
+        </a>
+        <a
+          href={currentProfile.linkedin}
+          target="_blank"
+          rel="noopener noreferrer"
+          aria-label="LinkedIn de Paulo Cardoso"
+          title="LinkedIn"
+        >
+          <Linkedin size={18} />
+        </a>
+        <a
+          href={currentProfile.leetcode}
+          target="_blank"
+          rel="noopener noreferrer"
+          aria-label="LeetCode de Paulo Cardoso"
+          title="LeetCode (PaulCard123)"
+        >
+          <LeetCodeIcon size={18} />
+        </a>
+        <a
+          href={currentProfile.codeforces}
+          target="_blank"
+          rel="noopener noreferrer"
+          aria-label="Codeforces de Paulo Cardoso"
+          title="Codeforces (Sunjinwoo42)"
+        >
+          <CodeforcesIcon size={18} />
+        </a>
+        <span className="side-line" />
+      </aside>
+
+      <main>
+        {/* 3. Hero Section — Apresentação Pessoal */}
+        <section id="home" className="hero-section">
+          <div className="hero-grid">
+            <div className="hero-content">
+              <h1 className="hero-name">{currentProfile.name}</h1>
+              <h2 className="hero-title">{currentProfile.title}</h2>
+
+              <AnimatedLead
+                phrases={
+                  currentProfile.rotatingLeads && currentProfile.rotatingLeads.length > 0
+                    ? currentProfile.rotatingLeads
+                    : [currentProfile.lead]
+                }
+              />
+
+              <p className="hero-bio">{currentProfile.shortBio}</p>
+
+              <div className="hero-actions">
+                <a className="btn solid" href="#projects">
+                  {t.hero.viewProjects}
+                </a>
+                <a
+                  className="btn outline"
+                  href={currentProfile.cvFile}
+                  download={currentProfile.cvDownload}
+                >
+                  <Download size={15} /> {t.hero.downloadCv}
+                </a>
+              </div>
+
+              <div className="hero-social-list" aria-label="Redes e contactos">
+                <a
+                  href={currentProfile.githubUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="hero-social-item"
+                  title="GitHub"
+                >
+                  <Github size={16} /> <span>GitHub</span>
+                </a>
+                <a
+                  href={currentProfile.linkedin}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="hero-social-item"
+                  title="LinkedIn"
+                >
+                  <Linkedin size={16} /> <span>LinkedIn</span>
+                </a>
+                <a
+                  href={currentProfile.leetcode}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="hero-social-item"
+                  title="LeetCode"
+                >
+                  <LeetCodeIcon size={16} /> <span>LeetCode</span>
+                </a>
+                <a
+                  href={currentProfile.codeforces}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="hero-social-item"
+                  title="Codeforces"
+                >
+                  <CodeforcesIcon size={16} /> <span>Codeforces</span>
+                </a>
+                <a
+                  href={`mailto:${currentProfile.email}`}
+                  className="hero-social-item"
+                  title="Email"
+                >
+                  <Mail size={16} /> <span>Email</span>
+                </a>
+              </div>
+            </div>
+
+            <div className="hero-image-wrap">
+              <div className="photo-container">
+                {!photoError ? (
+                  <img
+                    src={currentProfile.photo}
+                    alt={`Fotografia de ${currentProfile.name}`}
+                    className="hero-photo"
+                    onError={() => setPhotoError(true)}
+                  />
+                ) : (
+                  <div className="photo-fallback">
+                    <span>PC</span>
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+        </section>
+
+{orderedSections.filter(isVisible).map((key) => (
+          <React.Fragment key={key}>{sectionNodes[key]}</React.Fragment>
+        ))}
+
       </main>
 
       {/* 10. Footer */}

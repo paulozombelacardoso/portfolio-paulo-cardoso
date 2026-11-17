@@ -12,6 +12,8 @@ const { Pool, types } = pg;
 types.setTypeParser(1082, (value: string) => value);
 types.setTypeParser(1114, (value: string) => new Date(`${value}Z`).toISOString());
 types.setTypeParser(1184, (value: string) => new Date(value).toISOString());
+// COUNT(*) and BIGINT columns: return numbers instead of strings.
+types.setTypeParser(20, (value: string) => Number(value));
 
 export const pool = new Pool({
   connectionString: config.database.url,
@@ -168,23 +170,30 @@ export async function closeDb() {
   await pool.end();
 }
 
-// Compatibilidade: exportar objeto db com métodos que o middleware espera
+/** Convert SQLite-style "?" placeholders into PostgreSQL "$n" placeholders. */
+export function toPgPlaceholders(sql: string) {
+  let index = 0;
+  return sql.replace(/\?/g, () => `$${++index}`);
+}
+
+/**
+ * Async helper with a prepare/get/all/run API (placeholders "?"),
+ * kept so the route code reads like the original implementation.
+ */
 export const db = {
   pool,
   query,
-  all,
-  one,
-  execute,
-  transaction,
-  now,
-  pruneExpiredSessions,
-  getSettingsRow,
-  getSettings,
-  // Métodos que o middleware auth.ts espera (prepare/get/run)
-  prepare: (sql: string) => ({
-    get: ( ...params: unknown[] ) => one(sql, params),
-    run: ( ...params: unknown[] ) => execute(sql, params)
-  }),
-  // Método raw para queries antigas
-  raw: (sql: string, ...params: unknown[]) => query(sql, params)
+  prepare: (sql: string) => {
+    const text = toPgPlaceholders(sql);
+    return {
+      get: async <T = any>(...params: unknown[]) => (await pool.query(text, params)).rows[0] as T | undefined,
+      all: async <T = any>(...params: unknown[]) => (await pool.query(text, params)).rows as T[],
+      run: async (...params: unknown[]) => pool.query(text, params)
+    };
+  }
 };
+
+/** Run a "?"-style statement inside a transaction client. */
+export function clientRun(client: pg.PoolClient, sql: string, ...params: unknown[]) {
+  return client.query(toPgPlaceholders(sql), params);
+}

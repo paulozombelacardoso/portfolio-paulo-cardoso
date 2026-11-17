@@ -2,7 +2,7 @@ import fs from "node:fs";
 import path from "node:path";
 import { randomUUID } from "node:crypto";
 import { config } from "../config.js";
-import { db, getSettingsRow, now } from "../db.js";
+import { closeDb, db, getSettingsRow, now, runMigrations, waitForDatabase } from "../db.js";
 import { defaultSettings } from "../defaults.js";
 import { hashPassword } from "../middleware/auth.js";
 import {
@@ -26,8 +26,7 @@ import { slugify } from "../lib/util.js";
 const json = (value: unknown) => JSON.stringify(value ?? null);
 
 async function seedAdmin() {
-  const count = (db.prepare("SELECT COUNT(*) AS count FROM admin_users").get() as { count: number })
-    .count;
+  const count = ((await db.prepare("SELECT COUNT(*) AS count FROM admin_users").get()) as { count: number }).count;
   if (count > 0) return;
 
   if (!config.admin.email || !config.admin.password) {
@@ -41,9 +40,9 @@ async function seedAdmin() {
   }
 
   const passwordHash = await hashPassword(config.admin.password);
-  db.prepare(
+  await db.prepare(
     `INSERT INTO admin_users (id, email, password_hash, name, role, is_active, created_at, updated_at)
-     VALUES (?, ?, ?, ?, 'admin', 1, ?, ?)`
+     VALUES (?, ?, ?, ?, 'admin', TRUE, ?, ?)`
   ).run(
     randomUUID(),
     config.admin.email.toLowerCase(),
@@ -55,9 +54,8 @@ async function seedAdmin() {
   console.info(`[seed] Administrador criado: ${config.admin.email}`);
 }
 
-function seedProfile() {
-  const count = (db.prepare("SELECT COUNT(*) AS count FROM profile").get() as { count: number })
-    .count;
+async function seedProfile() {
+  const count = ((await db.prepare("SELECT COUNT(*) AS count FROM profile").get()) as { count: number }).count;
   if (count > 0) return;
 
   const content = {
@@ -81,7 +79,7 @@ function seedProfile() {
     }
   };
 
-  db.prepare(
+  await db.prepare(
     `INSERT INTO profile
      (id, content, email, phone, location, photo_url, github_url, linkedin_url, leetcode_url, codeforces_url, updated_at)
      VALUES (1, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
@@ -99,25 +97,24 @@ function seedProfile() {
   );
 }
 
-function seedProjects() {
-  const count = (db.prepare("SELECT COUNT(*) AS count FROM projects").get() as { count: number })
-    .count;
+async function seedProjects() {
+  const count = ((await db.prepare("SELECT COUNT(*) AS count FROM projects").get()) as { count: number }).count;
   if (count > 0) return;
 
   const insert = db.prepare(
     `INSERT INTO projects
      (id, slug, category, status, featured, cover_url, video_url, gallery, technologies, demo_url, github_url,
       started_at, completed_at, content, published, sort_order, created_at, updated_at)
-     VALUES (?, ?, ?, 'completed', ?, ?, ?, ?, ?, ?, ?, NULL, NULL, ?, 1, ?, ?, ?)`
+     VALUES (?, ?, ?, 'completed', ?, ?, ?, ?, ?, ?, ?, NULL, NULL, ?, TRUE, ?, ?, ?)`
   );
 
-  projects.forEach((project, index) => {
+  for (const [index, project] of projects.entries()) {
     const english = projectsEn.find((item) => item.id === project.id);
-    insert.run(
+    await insert.run(
       project.id,
       project.id,
       project.category,
-      index < 2 ? 1 : 0,
+      index < 2,
       project.coverImage || "",
       project.videoUrl || "",
       json(project.galleryImages || []),
@@ -150,29 +147,28 @@ function seedProjects() {
       now(),
       now()
     );
-  });
+  }
 }
 
-function seedExperiences() {
-  const count = (db.prepare("SELECT COUNT(*) AS count FROM experiences").get() as { count: number })
-    .count;
+async function seedExperiences() {
+  const count = ((await db.prepare("SELECT COUNT(*) AS count FROM experiences").get()) as { count: number }).count;
   if (count > 0) return;
 
   const insert = db.prepare(
     `INSERT INTO experiences
      (id, company, company_logo_url, contract_type, location, start_date, end_date, is_current,
       content, technologies, photos, certificate_file, certificate_label, published, sort_order, created_at, updated_at)
-     VALUES (?, ?, '', ?, ?, NULL, NULL, ?, ?, ?, ?, ?, ?, 1, ?, ?, ?)`
+     VALUES (?, ?, '', ?, ?, NULL, NULL, ?, ?, ?, ?, ?, ?, TRUE, ?, ?, ?)`
   );
 
-  experiences.forEach((experience, index) => {
+  for (const [index, experience] of experiences.entries()) {
     const english = experiencesEn.find((item) => item.id === experience.id);
-    insert.run(
+    await insert.run(
       experience.id,
       experience.company,
       experience.role.toLowerCase().includes("freelancer") ? "freelance" : "other",
       experience.location,
-      experience.period.toLowerCase().includes("presente") ? 1 : 0,
+      experience.period.toLowerCase().includes("presente"),
       json({
         pt: {
           role: experience.role,
@@ -197,24 +193,23 @@ function seedExperiences() {
       now(),
       now()
     );
-  });
+  }
 }
 
-function seedCertifications() {
-  const count = (db.prepare("SELECT COUNT(*) AS count FROM certifications").get() as { count: number })
-    .count;
+async function seedCertifications() {
+  const count = ((await db.prepare("SELECT COUNT(*) AS count FROM certifications").get()) as { count: number }).count;
   if (count > 0) return;
 
   const insert = db.prepare(
     `INSERT INTO certifications
      (id, issuer, issue_date, expiry_date, credential_id, verification_url, file_url, thumbnail_url,
       skills, content, published, sort_order, created_at, updated_at)
-     VALUES (?, ?, NULL, NULL, '', '', ?, ?, ?, ?, 1, ?, ?, ?)`
+     VALUES (?, ?, NULL, NULL, '', '', ?, ?, ?, ?, TRUE, ?, ?, ?)`
   );
 
-  certificatesList.forEach((certificate, index) => {
+  for (const [index, certificate] of certificatesList.entries()) {
     const english = certificatesListEn.find((item) => item.id === certificate.id);
-    insert.run(
+    await insert.run(
       certificate.id,
       certificate.issuer,
       certificate.file,
@@ -238,24 +233,23 @@ function seedCertifications() {
       now(),
       now()
     );
-  });
+  }
 }
 
-function seedEducation() {
-  const count = (db.prepare("SELECT COUNT(*) AS count FROM education").get() as { count: number })
-    .count;
+async function seedEducation() {
+  const count = ((await db.prepare("SELECT COUNT(*) AS count FROM education").get()) as { count: number }).count;
   if (count > 0) return;
 
   const insert = db.prepare(
     `INSERT INTO education
      (id, institution, degree_level, status, start_date, end_date, logo_url, content, published, sort_order, created_at, updated_at)
-     VALUES (?, ?, ?, ?, NULL, NULL, '', ?, 1, ?, ?, ?)`
+     VALUES (?, ?, ?, ?, NULL, NULL, '', ?, TRUE, ?, ?, ?)`
   );
 
-  educationList.forEach((item, index) => {
+  for (const [index, item] of educationList.entries()) {
     const english = educationListEn[index];
     const inProgress = item.period.toLowerCase().includes("curso");
-    insert.run(
+    await insert.run(
       slugify(item.school) || `education-${index}`,
       item.school,
       "",
@@ -280,13 +274,11 @@ function seedEducation() {
       now(),
       now()
     );
-  });
+  }
 }
 
-function seedSkills() {
-  const categoryCount = (
-    db.prepare("SELECT COUNT(*) AS count FROM skill_categories").get() as { count: number }
-  ).count;
+async function seedSkills() {
+  const categoryCount = ((await db.prepare("SELECT COUNT(*) AS count FROM skill_categories").get()) as { count: number }).count;
   if (categoryCount > 0) return;
 
   const keys = ["languages", "backend", "database", "devops", "ai"];
@@ -297,13 +289,13 @@ function seedSkills() {
   );
   const insertSkill = db.prepare(
     `INSERT INTO skills (id, name, category_id, level, published, sort_order, created_at, updated_at)
-     VALUES (?, ?, ?, NULL, 1, ?, ?, ?)`
+     VALUES (?, ?, ?, NULL, TRUE, ?, ?, ?)`
   );
 
-  stackCategories.forEach((category, categoryIndex) => {
+  for (const [categoryIndex, category] of stackCategories.entries()) {
     const english = stackCategoriesEn[categoryIndex];
     const categoryId = `cat-${keys[categoryIndex]}`;
-    insertCategory.run(
+    await insertCategory.run(
       categoryId,
       json({ pt: category.name, en: english?.name || category.name }),
       json({
@@ -316,17 +308,17 @@ function seedSkills() {
       now()
     );
 
-    category.items.forEach((item, skillIndex) => {
-      insertSkill.run(
-        `skill-${keys[categoryIndex]}-${slugify(item) || skillIndex}`,
+    for (const [skillIndex, item] of category.items.entries()) {
+      await insertSkill.run(
+        `skill-${keys[categoryIndex]}-${skillIndex}-${slugify(item) || "item"}`,
         json({ pt: item, en: english?.items[skillIndex] || item }),
         categoryId,
         skillIndex * 10,
         now(),
         now()
       );
-    });
-  });
+    }
+  }
 
   const extraCategories = [
     { key: "frontend", pt: "Frontend", en: "Frontend", icon: "Layout", order: 60 },
@@ -334,7 +326,7 @@ function seedSkills() {
     { key: "other", pt: "Outros", en: "Other", icon: "Layers", order: 80 }
   ];
   for (const extra of extraCategories) {
-    insertCategory.run(
+    await insertCategory.run(
       `cat-${extra.key}`,
       json({ pt: extra.pt, en: extra.en }),
       json({ pt: "", en: "" }),
@@ -346,18 +338,17 @@ function seedSkills() {
   }
 }
 
-function seedCourses() {
-  const count = (db.prepare("SELECT COUNT(*) AS count FROM courses").get() as { count: number })
-    .count;
+async function seedCourses() {
+  const count = ((await db.prepare("SELECT COUNT(*) AS count FROM courses").get()) as { count: number }).count;
   if (count > 0) return;
 
   const insert = db.prepare(
     `INSERT INTO courses
      (id, provider, type, completed_at, url, file_url, content, published, sort_order, created_at, updated_at)
-     VALUES (?, ?, ?, ?, '', ?, ?, 1, ?, ?, ?)`
+     VALUES (?, ?, ?, ?, '', ?, ?, TRUE, ?, ?, ?)`
   );
 
-  insert.run(
+  await insert.run(
     "course-node-ai",
     "Formação Técnica Especializada",
     "course",
@@ -378,7 +369,7 @@ function seedCourses() {
     now()
   );
 
-  insert.run(
+  await insert.run(
     "course-english",
     "OPEN MOOCs / U.S. Dept of State & FHI 360",
     "course",
@@ -399,7 +390,7 @@ function seedCourses() {
     now()
   );
 
-  insert.run(
+  await insert.run(
     "course-tigra",
     "Refriango / Tigra Cubs",
     "bootcamp",
@@ -421,20 +412,20 @@ function seedCourses() {
   );
 }
 
-function seedSettings() {
-  if (getSettingsRow()) return;
-  db.prepare("INSERT INTO settings (id, data, updated_at) VALUES (1, ?, ?)").run(
+async function seedSettings() {
+  if (await getSettingsRow()) return;
+  await db.prepare("INSERT INTO settings (id, data, updated_at) VALUES (1, ?, ?)").run(
     json(defaultSettings),
     now()
   );
 }
 
-function seedCv() {
-  const count = (db.prepare("SELECT COUNT(*) AS count FROM cvs").get() as { count: number }).count;
+async function seedCv() {
+  const count = ((await db.prepare("SELECT COUNT(*) AS count FROM cvs").get()) as { count: number }).count;
   if (count > 0) return;
-  db.prepare(
+  await db.prepare(
     `INSERT INTO cvs (id, label, file_url, file_name, is_active, created_at)
-     VALUES (?, ?, ?, ?, 1, ?)`
+     VALUES (?, ?, ?, ?, TRUE, ?)`
   ).run(
     "cv-default",
     "Curriculum Vitae",
@@ -469,11 +460,14 @@ function walkFiles(directory: string, base = ""): string[] {
   return files;
 }
 
-function seedMedia() {
+async function seedMedia() {
+  // Register the static files shipped in /public so they appear in the media library.
   const insert = db.prepare(
-    `INSERT OR IGNORE INTO media
-     (id, filename, original_name, url, mime_type, size, kind, alt_text, created_at)
-     VALUES (?, ?, ?, ?, ?, ?, ?, '', ?)`
+    `INSERT INTO media
+     (id, public_id, secure_url, resource_type, format, bytes, width, height, duration, folder,
+      original_name, mime_type, kind, alt_text, transformations, created_at, updated_at)
+     VALUES (?, ?, ?, ?, ?, ?, NULL, NULL, NULL, ?, ?, ?, ?, '', ?, ?, ?)
+     ON CONFLICT (public_id) DO NOTHING`
   );
   const files = walkFiles(config.publicDir);
   for (const relative of files) {
@@ -482,37 +476,48 @@ function seedMedia() {
     const mime = mimeByExtension[extension];
     if (!mime) continue;
     const stats = fs.statSync(absolute);
-    insert.run(
+    const isImage = mime.startsWith("image/");
+    const url = `/${relative}`;
+    await insert.run(
       `media-${randomUUID()}`,
-      relative,
-      path.basename(relative),
-      relative,
-      mime,
+      `public/${relative}`,
+      url,
+      isImage ? "image" : "raw",
+      extension.slice(1),
       stats.size,
-      mime.startsWith("image/") ? "image" : "document",
+      path.dirname(relative) === "." ? "public" : `public/${path.dirname(relative)}`,
+      path.basename(relative),
+      mime,
+      isImage ? "image" : "document",
+      json({ thumbnail: url, card: url, preview: url, full: url, download: url }),
+      now(),
       now()
     );
   }
 }
 
 export async function seedDatabase() {
+  await waitForDatabase();
+  await runMigrations();
   await seedAdmin();
-  seedProfile();
-  seedProjects();
-  seedExperiences();
-  seedCertifications();
-  seedEducation();
-  seedSkills();
-  seedCourses();
-  seedSettings();
-  seedCv();
-  seedMedia();
+  await seedSettings();
+  if (!config.seedDemoContent) return;
+  await seedProfile();
+  await seedProjects();
+  await seedExperiences();
+  await seedCertifications();
+  await seedEducation();
+  await seedSkills();
+  await seedCourses();
+  await seedCv();
+  await seedMedia();
 }
 
-if (process.argv[1] && process.argv[1].endsWith("seed.ts")) {
+if (process.argv[1] && /seed\.(ts|js)$/.test(process.argv[1])) {
   seedDatabase()
-    .then(() => {
+    .then(async () => {
       console.info("[seed] Base de dados preparada com sucesso.");
+      await closeDb();
       process.exit(0);
     })
     .catch((error) => {

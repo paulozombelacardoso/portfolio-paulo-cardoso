@@ -28,8 +28,10 @@ export function shortToken(bytes = 32) {
   return randomBytes(bytes).toString("base64url");
 }
 
-export function parseJson<T>(value: string | null | undefined, fallback: T): T {
-  if (!value) return fallback;
+export function parseJson<T>(value: unknown, fallback: T): T {
+  if (value === null || value === undefined || value === "") return fallback;
+  // JSONB columns are already parsed by the pg driver.
+  if (typeof value !== "string") return value as T;
   try {
     return JSON.parse(value) as T;
   } catch {
@@ -38,11 +40,11 @@ export function parseJson<T>(value: string | null | undefined, fallback: T): T {
 }
 
 export function toBool(value: unknown) {
-  return value === 1 || value === true || value === "1" || value === "true";
+  return value === 1 || value === true || value === "1" || value === "true" || value === "t";
 }
 
 export function toDbBool(value: unknown) {
-  return value ? 1 : 0;
+  return Boolean(value);
 }
 
 export function cleanNullable(value: unknown) {
@@ -54,15 +56,15 @@ export function nowIso() {
   return new Date().toISOString();
 }
 
-export function ensureUniqueSlug(
+export async function ensureUniqueSlug(
   baseValue: string,
-  exists: (slug: string) => boolean,
+  exists: (slug: string) => Promise<boolean>,
   fallbackPrefix = "item"
 ) {
   const base = slugify(baseValue) || fallbackPrefix;
   let candidate = base;
   let index = 2;
-  while (exists(candidate)) {
+  while (await exists(candidate)) {
     candidate = `${base}-${index}`;
     index += 1;
   }
@@ -126,4 +128,13 @@ export function localizedValue(value: unknown, lang: "pt" | "en") {
 
 export function clamp(value: number, min: number, max: number) {
   return Math.min(Math.max(value, min), max);
+}
+
+/**
+ * Zod 4 aplica `.default()` mesmo dentro de `.partial()`. Num PATCH isso repunha
+ * campos omitidos nos valores por omissão; mantemos só as chaves enviadas.
+ */
+export function onlyProvided<T extends Record<string, unknown>>(parsed: T, body: unknown): Partial<T> {
+  const provided = body && typeof body === "object" ? (body as Record<string, unknown>) : {};
+  return Object.fromEntries(Object.entries(parsed).filter(([key]) => key in provided)) as Partial<T>;
 }
